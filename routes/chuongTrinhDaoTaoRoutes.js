@@ -11,4 +11,7 @@ router.post('/', (req, res) => chuongTrinhDaoTaoController.themChuongTrinhDaoTao
 // Route lấy danh sách chương trình đào tạo
 router.get('/', (req, res) => chuongTrinhDaoTaoController.layDanhSachChuongTrinhDaoTao(req, res));
 
+router.get('/:id', (req, res) => chuongTrinhDaoTaoController.layChiTietChuongTrinhDaoTaoTheoChuyenNganh(req, res));
+
+
 module.exports = router;
