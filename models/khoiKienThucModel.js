@@ -51,6 +51,65 @@ class KhoiKienThucModel {
             };
         }
     }
+
+    async suaKhoiKienThuc(maKhoiKienThuc, tenKhoiKienThuc, parentID) {
+        try {
+            const pool = await poolPromise;
+            const result = await pool.request()
+                .input('MaKhoiKienThuc', sql.NVarChar(10), maKhoiKienThuc)
+                .input('TenKhoiKienThuc', sql.NVarChar(100), tenKhoiKienThuc)
+                .input('ParentID', sql.NVarChar(10), parentID || null)
+                .execute('SP_SuaKhoiKienThuc');
+    
+            if (result.recordset && result.recordset.length > 0) {
+                return {
+                    success: true,
+                    message: 'Cập nhật khối kiến thức thành công',
+                    data: result.recordset[0]
+                };
+            } else {
+                return {
+                    success: false,
+                    message: 'Cập nhật khối kiến thức thất bại'
+                };
+            }
+        } catch (error) {
+            console.error('Model - Error suaKhoiKienThuc:', error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
+    
+    // Xóa khối kiến thức
+    async xoaKhoiKienThuc(maKhoiKienThuc) {
+        try {
+            const pool = await poolPromise;
+            const result = await pool.request()
+                .input('MaKhoiKienThuc', sql.NVarChar(10), maKhoiKienThuc)
+                .execute('SP_XoaKhoiKienThuc');
+    
+            if (result.recordset && result.recordset.length > 0) {
+                return {
+                    success: true,
+                    message: 'Xóa khối kiến thức thành công',
+                    data: result.recordset[0]
+                };
+            } else {
+                return {
+                    success: false,
+                    message: 'Xóa khối kiến thức thất bại hoặc khối kiến thức không tồn tại'
+                };
+            }
+        } catch (error) {
+            console.error('Model - Error xoaKhoiKienThuc:', error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
 }
 
 module.exports = KhoiKienThucModel;

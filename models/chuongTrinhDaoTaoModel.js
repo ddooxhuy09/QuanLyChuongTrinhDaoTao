@@ -89,6 +89,73 @@ class ChuongTrinhDaoTaoModel {
             };
         }
     }
+
+    async layDanhSachChuongTrinhDaoTaoTheoFilter(maChuyenNganh, maNienKhoa) {
+        try {
+            const pool = await poolPromise;
+            
+            // Prepare request with optional parameters
+            const request = pool.request();
+            
+            if (maChuyenNganh) {
+                request.input('MaChuyenNganh', sql.NVarChar(10), maChuyenNganh);
+            } else {
+                request.input('MaChuyenNganh', sql.NVarChar(10), null);
+            }
+            
+            if (maNienKhoa) {
+                request.input('MaNienKhoa', sql.NVarChar(10), maNienKhoa);
+            } else {
+                request.input('MaNienKhoa', sql.NVarChar(10), null);
+            }
+            
+            // Execute stored procedure
+            const result = await request.execute('SP_DocDanhSachChuongTrinhDaoTao_TheoFilter');
+            
+            // Process data: curricula and their details
+            let curricula = result.recordsets[0] || [];
+            let details = result.recordsets[1] || [];
+            
+            // Structure the response with nested data
+            if (curricula.length > 0) {
+                // Group details by MaChuongTrinh
+                const detailsByCurriculum = details.reduce((acc, detail) => {
+                    if (!acc[detail.MaChuongTrinh]) {
+                        acc[detail.MaChuongTrinh] = [];
+                    }
+                    acc[detail.MaChuongTrinh].push(detail);
+                    return acc;
+                }, {});
+                
+                // Attach details to each curriculum
+                curricula = curricula.map(curriculum => ({
+                    ...curriculum,
+                    chiTiet: detailsByCurriculum[curriculum.MaChuongTrinh] || []
+                }));
+            }
+            
+            return {
+                success: true,
+                message: curricula.length > 0 ? 
+                    'Lấy danh sách chương trình đào tạo thành công' : 
+                    'Không tìm thấy chương trình đào tạo phù hợp với điều kiện lọc',
+                data: curricula,
+                meta: {
+                    filter: {
+                        maChuyenNganh: maChuyenNganh || null,
+                        maNienKhoa: maNienKhoa || null
+                    },
+                    total: curricula.length
+                }
+            };
+        } catch (error) {
+            console.error('Model - Error layDanhSachChuongTrinhDaoTaoTheoFilter:', error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
 }
 
 module.exports = ChuongTrinhDaoTaoModel;

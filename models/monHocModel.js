@@ -67,6 +67,27 @@ class MonHocModel {
         };
     }
 }
+async layDanhSachMonHocTheoKhoiKienThuc(maKhoiKienThuc) {
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('MaKhoiKienThuc', sql.NVarChar(10), maKhoiKienThuc)
+      .execute('SP_DocDanhSachMonHocTheoKhoiKienThuc');
+
+    return {
+      success: true,
+      message: 'Lấy danh sách môn học theo khối kiến thức thành công',
+      data: result.recordset
+    };
+  } catch (error) {
+    console.error('Model - Error layDanhSachMonHocTheoKhoiKienThuc:', error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+}
+
 }
 
 module.exports = MonHocModel;

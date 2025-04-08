@@ -13,5 +13,14 @@ router.get('/', (req, res) => chuongTrinhDaoTaoController.layDanhSachChuongTrinh
 
 router.get('/:id', (req, res) => chuongTrinhDaoTaoController.layChiTietChuongTrinhDaoTaoTheoChuyenNganh(req, res));
 
+router.get('/', (req, res) => {
+    // Check if any filter parameters are provided
+    if (req.query.MaChuyenNganh || req.query.MaNienKhoa) {
+        return chuongTrinhDaoTaoController.layDanhSachChuongTrinhDaoTaoTheoFilter(req, res);
+    } else {
+        // If no filters, use the original method
+        return chuongTrinhDaoTaoController.layDanhSachChuongTrinhDaoTao(req, res);
+    }
+});
 
 module.exports = router;

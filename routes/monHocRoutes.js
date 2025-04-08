@@ -10,4 +10,8 @@ router.post('/', (req, res) => monHocController.themMonHoc(req, res));
 
 router.get('/', (req, res) => monHocController.layDanhSachMonHoc(req, res));
 
+router.get('/khoikienthuc/:maKhoiKienThuc', (req, res) => 
+    monHocController.layDanhSachMonHocTheoKhoiKienThuc(req, res)
+  );
+
 module.exports = router;
