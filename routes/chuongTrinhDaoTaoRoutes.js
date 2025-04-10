@@ -8,11 +8,7 @@ const chuongTrinhDaoTaoController = new ChuongTrinhDaoTaoController();
 // Route thêm chương trình đào tạo mới
 router.post('/', (req, res) => chuongTrinhDaoTaoController.themChuongTrinhDaoTao(req, res));
 
-// Route lấy danh sách chương trình đào tạo
-router.get('/', (req, res) => chuongTrinhDaoTaoController.layDanhSachChuongTrinhDaoTao(req, res));
-
-router.get('/:id', (req, res) => chuongTrinhDaoTaoController.layChiTietChuongTrinhDaoTaoTheoChuyenNganh(req, res));
-
+// Consolidated route for getting list with or without filters
 router.get('/', (req, res) => {
     // Check if any filter parameters are provided
     if (req.query.MaChuyenNganh || req.query.MaNienKhoa) {
@@ -22,5 +18,8 @@ router.get('/', (req, res) => {
         return chuongTrinhDaoTaoController.layDanhSachChuongTrinhDaoTao(req, res);
     }
 });
+
+// Route để lấy chi tiết theo ID chuyên ngành
+router.get('/:id', (req, res) => chuongTrinhDaoTaoController.layChiTietChuongTrinhDaoTaoTheoChuyenNganh(req, res));
 
 module.exports = router;
