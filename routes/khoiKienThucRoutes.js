@@ -11,6 +11,9 @@ router.post('/', (req, res) => khoiKienThucController.themKhoiKienThuc(req, res)
 // Route lấy danh sách khối kiến thức
 router.get('/', (req, res) => khoiKienThucController.layDanhSachKhoiKienThuc(req, res));
 
+// Route lấy chi tiết khối kiến thức và danh sách môn học theo id
+router.get('/:id', (req, res) => khoiKienThucController.layChiTietKhoiKienThucVaMonHoc(req, res));
+
 router.put('/:id', (req, res) => khoiKienThucController.suaKhoiKienThuc(req, res));
 
 // Route xóa khối kiến thức

@@ -83,13 +83,14 @@ class ChuongTrinhDaoTaoController {
     async layDanhSachChuongTrinhDaoTaoTheoFilter(req, res) {
         try {
             // Extract filter parameters from query string
-            const { MaChuyenNganh, MaNienKhoa } = req.query;
+            const { maNganh, MaChuyenNganh, MaNienKhoa } = req.query;
             
             // Log the received parameters for debugging
-            console.log(`Filtering curricula with MaChuyenNganh=${MaChuyenNganh}, MaNienKhoa=${MaNienKhoa}`);
+            console.log(`Filtering curricula with maNganh=${maNganh}, MaChuyenNganh=${MaChuyenNganh}, MaNienKhoa=${MaNienKhoa}`);
             
             // Call model method with filters
             const result = await this.chuongTrinhDaoTaoModel.layDanhSachChuongTrinhDaoTaoTheoFilter(
+                maNganh,
                 MaChuyenNganh, 
                 MaNienKhoa
             );

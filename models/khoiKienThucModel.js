@@ -110,6 +110,41 @@ class KhoiKienThucModel {
             };
         }
     }
+    async layChiTietKhoiKienThucVaMonHoc(maKhoiKienThuc) {
+        try {
+            const pool = await poolPromise;
+            const result = await pool.request()
+                .input('MaKhoiKienThuc', sql.NVarChar(10), maKhoiKienThuc)
+                .execute('SP_DocChiTietKhoiKienThucVaMonHoc');
+            
+            if (result.recordsets && result.recordsets.length >= 2) {
+                const khoiKienThuc = result.recordsets[0][0] || null;
+                const monHocList = result.recordsets[1] || [];
+                
+                if (khoiKienThuc) {
+                    return {
+                        success: true,
+                        message: 'Lấy thông tin khối kiến thức và môn học thành công',
+                        data: {
+                            khoiKienThuc: khoiKienThuc,
+                            danhSachMonHoc: monHocList
+                        }
+                    };
+                }
+            }
+            
+            return {
+                success: false,
+                message: 'Không tìm thấy khối kiến thức'
+            };
+        } catch (error) {
+            console.error('Model - Error layChiTietKhoiKienThucVaMonHoc:', error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
 }
 
 module.exports = KhoiKienThucModel;

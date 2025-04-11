@@ -117,6 +117,34 @@ class KhoiKienThucController {
             });
         }
     }
+
+    async layChiTietKhoiKienThucVaMonHoc(req, res) {
+        try {
+            const { id } = req.params;
+            
+            // Kiểm tra dữ liệu đầu vào
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Mã khối kiến thức không được để trống'
+                });
+            }
+            
+            // Gọi phương thức từ model
+            const result = await this.khoiKienThucModel.layChiTietKhoiKienThucVaMonHoc(id);
+            
+            if (result.success) {
+                return res.status(200).json(result);
+            } else {
+                return res.status(404).json(result);
+            }
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi server: ' + error.message
+            });
+        }
+    }
 }
 
 module.exports = KhoiKienThucController;

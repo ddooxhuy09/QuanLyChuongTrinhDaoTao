@@ -90,12 +90,18 @@ class ChuongTrinhDaoTaoModel {
         }
     }
 
-    async layDanhSachChuongTrinhDaoTaoTheoFilter(maChuyenNganh, maNienKhoa) {
+    async layDanhSachChuongTrinhDaoTaoTheoFilter(maNganh, maChuyenNganh, maNienKhoa) {
         try {
             const pool = await poolPromise;
             
             // Prepare request with optional parameters
             const request = pool.request();
+            
+            if (maNganh) {
+                request.input('MaNganh', sql.NVarChar(10), maNganh);
+            } else {
+                request.input('MaNganh', sql.NVarChar(10), null);
+            }
             
             if (maChuyenNganh) {
                 request.input('MaChuyenNganh', sql.NVarChar(10), maChuyenNganh);
@@ -116,7 +122,7 @@ class ChuongTrinhDaoTaoModel {
             let curricula = result.recordsets[0] || [];
             let details = result.recordsets[1] || [];
             
-            // Structure the response with nested data
+            // Structure the response with nested data - group by Major (Ngành) first
             if (curricula.length > 0) {
                 // Group details by MaChuongTrinh
                 const detailsByCurriculum = details.reduce((acc, detail) => {
@@ -127,27 +133,79 @@ class ChuongTrinhDaoTaoModel {
                     return acc;
                 }, {});
                 
-                // Attach details to each curriculum
-                curricula = curricula.map(curriculum => ({
-                    ...curriculum,
-                    chiTiet: detailsByCurriculum[curriculum.MaChuongTrinh] || []
-                }));
+                // Group curricula by MaNganh first, then by MaChuyenNganh
+                const nganhMap = curricula.reduce((acc, curriculum) => {
+                    // Initialize major if not exists
+                    if (!acc[curriculum.MaNganh]) {
+                        acc[curriculum.MaNganh] = {
+                            maNganh: curriculum.MaNganh,
+                            tenNganh: curriculum.TenNganh,
+                            chuyenNganh: {}
+                        };
+                    }
+                    
+                    // Initialize specialization if not exists
+                    if (!acc[curriculum.MaNganh].chuyenNganh[curriculum.MaChuyenNganh]) {
+                        acc[curriculum.MaNganh].chuyenNganh[curriculum.MaChuyenNganh] = {
+                            maChuyenNganh: curriculum.MaChuyenNganh,
+                            tenChuyenNganh: curriculum.TenChuyenNganh,
+                            chuongTrinhDaoTao: []
+                        };
+                    }
+                    
+                    // Add this curriculum to the specialization
+                    acc[curriculum.MaNganh].chuyenNganh[curriculum.MaChuyenNganh].chuongTrinhDaoTao.push({
+                        maChuongTrinh: curriculum.MaChuongTrinh,
+                        tenChuongTrinh: curriculum.TenChuongTrinh,
+                        maNienKhoa: curriculum.MaNienKhoa,
+                        tenNienKhoa: curriculum.TenNienKhoa,
+                        chiTiet: detailsByCurriculum[curriculum.MaChuongTrinh] || []
+                    });
+                    
+                    return acc;
+                }, {});
+                
+                // Convert the map to array format
+                const resultData = Object.values(nganhMap).map(nganh => {
+                    return {
+                        ...nganh,
+                        chuyenNganh: Object.values(nganh.chuyenNganh)
+                    };
+                });
+                
+                return {
+                    success: true,
+                    message: resultData.length > 0 ? 
+                        'Lấy danh sách chương trình đào tạo thành công' : 
+                        'Không tìm thấy chương trình đào tạo phù hợp với điều kiện lọc',
+                    data: resultData,
+                    meta: {
+                        filter: {
+                            maNganh: maNganh || null,
+                            maChuyenNganh: maChuyenNganh || null,
+                            maNienKhoa: maNienKhoa || null
+                        },
+                        total: {
+                            nganh: resultData.length,
+                            chuongTrinh: curricula.length
+                        }
+                    }
+                };
+            } else {
+                return {
+                    success: true,
+                    message: 'Không tìm thấy chương trình đào tạo phù hợp với điều kiện lọc',
+                    data: [],
+                    meta: {
+                        filter: {
+                            maNganh: maNganh || null,
+                            maChuyenNganh: maChuyenNganh || null,
+                            maNienKhoa: maNienKhoa || null
+                        },
+                        total: 0
+                    }
+                };
             }
-            
-            return {
-                success: true,
-                message: curricula.length > 0 ? 
-                    'Lấy danh sách chương trình đào tạo thành công' : 
-                    'Không tìm thấy chương trình đào tạo phù hợp với điều kiện lọc',
-                data: curricula,
-                meta: {
-                    filter: {
-                        maChuyenNganh: maChuyenNganh || null,
-                        maNienKhoa: maNienKhoa || null
-                    },
-                    total: curricula.length
-                }
-            };
         } catch (error) {
             console.error('Model - Error layDanhSachChuongTrinhDaoTaoTheoFilter:', error);
             return {
