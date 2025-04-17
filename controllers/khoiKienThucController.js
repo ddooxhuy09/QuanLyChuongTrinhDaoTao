@@ -132,7 +132,7 @@ class KhoiKienThucController {
             
             // Gọi phương thức từ model
             const result = await this.khoiKienThucModel.layChiTietKhoiKienThucVaMonHoc(id);
-            
+        
             if (result.success) {
                 return res.status(200).json(result);
             } else {

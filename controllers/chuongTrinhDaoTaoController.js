@@ -82,17 +82,18 @@ class ChuongTrinhDaoTaoController {
 
     async layDanhSachChuongTrinhDaoTaoTheoFilter(req, res) {
         try {
-            // Extract filter parameters from query string
-            const { maNganh, MaChuyenNganh, MaNienKhoa } = req.query;
+            // Extract filter parameters from query string - đồng bộ tất cả là viết thường
+            const { maKhoa, maNganh, maChuyenNganh, maNienKhoa } = req.query;
             
             // Log the received parameters for debugging
-            console.log(`Filtering curricula with maNganh=${maNganh}, MaChuyenNganh=${MaChuyenNganh}, MaNienKhoa=${MaNienKhoa}`);
+            console.log(`Filtering curricula with maKhoa=${maKhoa}, maNganh=${maNganh}, maChuyenNganh=${maChuyenNganh}, maNienKhoa=${maNienKhoa}`);
             
-            // Call model method with filters
+            // Call model method with all filters
             const result = await this.chuongTrinhDaoTaoModel.layDanhSachChuongTrinhDaoTaoTheoFilter(
+                maKhoa,
                 maNganh,
-                MaChuyenNganh, 
-                MaNienKhoa
+                maChuyenNganh, 
+                maNienKhoa
             );
             
             if (result.success) {

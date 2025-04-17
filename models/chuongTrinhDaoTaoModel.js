@@ -90,12 +90,19 @@ class ChuongTrinhDaoTaoModel {
         }
     }
 
-    async layDanhSachChuongTrinhDaoTaoTheoFilter(maNganh, maChuyenNganh, maNienKhoa) {
+    async layDanhSachChuongTrinhDaoTaoTheoFilter(maKhoa, maNganh, maChuyenNganh, maNienKhoa) {
         try {
             const pool = await poolPromise;
             
             // Prepare request with optional parameters
             const request = pool.request();
+            
+            // Add new parameter maKhoa
+            if (maKhoa) {
+                request.input('MaKhoa', sql.NVarChar(10), maKhoa);
+            } else {
+                request.input('MaKhoa', sql.NVarChar(10), null);
+            }
             
             if (maNganh) {
                 request.input('MaNganh', sql.NVarChar(10), maNganh);
@@ -122,54 +129,78 @@ class ChuongTrinhDaoTaoModel {
             let curricula = result.recordsets[0] || [];
             let details = result.recordsets[1] || [];
             
-            // Structure the response with nested data - group by Major (Ngành) first
+            // Structure the response based on the filters
             if (curricula.length > 0) {
-                // Group details by MaChuongTrinh
-                const detailsByCurriculum = details.reduce((acc, detail) => {
+                // Chỉ khi lọc theo chuyên ngành mới có chi tiết môn học
+                let includeSubjects = maChuyenNganh ? true : false;
+                
+                // Group details by MaChuongTrinh if we need subject details
+                const detailsByCurriculum = includeSubjects ? details.reduce((acc, detail) => {
                     if (!acc[detail.MaChuongTrinh]) {
                         acc[detail.MaChuongTrinh] = [];
                     }
                     acc[detail.MaChuongTrinh].push(detail);
                     return acc;
-                }, {});
+                }, {}) : {};
                 
-                // Group curricula by MaNganh first, then by MaChuyenNganh
-                const nganhMap = curricula.reduce((acc, curriculum) => {
-                    // Initialize major if not exists
-                    if (!acc[curriculum.MaNganh]) {
-                        acc[curriculum.MaNganh] = {
+                // Group curricula by hierarchy: Khoa > Nganh > ChuyenNganh > ChuongTrinh
+                const khoaMap = curricula.reduce((acc, curriculum) => {
+                    // Initialize Khoa if not exists
+                    if (!acc[curriculum.MaKhoa]) {
+                        acc[curriculum.MaKhoa] = {
+                            maKhoa: curriculum.MaKhoa,
+                            tenKhoa: curriculum.TenKhoa,
+                            nganh: {}
+                        };
+                    }
+                    
+                    // Initialize Nganh if not exists
+                    if (!acc[curriculum.MaKhoa].nganh[curriculum.MaNganh]) {
+                        acc[curriculum.MaKhoa].nganh[curriculum.MaNganh] = {
                             maNganh: curriculum.MaNganh,
                             tenNganh: curriculum.TenNganh,
                             chuyenNganh: {}
                         };
                     }
                     
-                    // Initialize specialization if not exists
-                    if (!acc[curriculum.MaNganh].chuyenNganh[curriculum.MaChuyenNganh]) {
-                        acc[curriculum.MaNganh].chuyenNganh[curriculum.MaChuyenNganh] = {
+                    // Initialize ChuyenNganh if not exists
+                    if (!acc[curriculum.MaKhoa].nganh[curriculum.MaNganh].chuyenNganh[curriculum.MaChuyenNganh]) {
+                        acc[curriculum.MaKhoa].nganh[curriculum.MaNganh].chuyenNganh[curriculum.MaChuyenNganh] = {
                             maChuyenNganh: curriculum.MaChuyenNganh,
                             tenChuyenNganh: curriculum.TenChuyenNganh,
                             chuongTrinhDaoTao: []
                         };
                     }
                     
-                    // Add this curriculum to the specialization
-                    acc[curriculum.MaNganh].chuyenNganh[curriculum.MaChuyenNganh].chuongTrinhDaoTao.push({
+                    // Add curriculum to the specialization
+                    let curriculumData = {
                         maChuongTrinh: curriculum.MaChuongTrinh,
                         tenChuongTrinh: curriculum.TenChuongTrinh,
                         maNienKhoa: curriculum.MaNienKhoa,
-                        tenNienKhoa: curriculum.TenNienKhoa,
-                        chiTiet: detailsByCurriculum[curriculum.MaChuongTrinh] || []
-                    });
+                        tenNienKhoa: curriculum.TenNienKhoa
+                    };
+                    
+                    // Only add subject details if filtering by specialization
+                    if (includeSubjects) {
+                        curriculumData.chiTiet = detailsByCurriculum[curriculum.MaChuongTrinh] || [];
+                    }
+                    
+                    acc[curriculum.MaKhoa].nganh[curriculum.MaNganh].chuyenNganh[curriculum.MaChuyenNganh]
+                        .chuongTrinhDaoTao.push(curriculumData);
                     
                     return acc;
                 }, {});
                 
                 // Convert the map to array format
-                const resultData = Object.values(nganhMap).map(nganh => {
+                const resultData = Object.values(khoaMap).map(khoa => {
                     return {
-                        ...nganh,
-                        chuyenNganh: Object.values(nganh.chuyenNganh)
+                        ...khoa,
+                        nganh: Object.values(khoa.nganh).map(nganh => {
+                            return {
+                                ...nganh,
+                                chuyenNganh: Object.values(nganh.chuyenNganh)
+                            };
+                        })
                     };
                 });
                 
@@ -181,12 +212,13 @@ class ChuongTrinhDaoTaoModel {
                     data: resultData,
                     meta: {
                         filter: {
+                            maKhoa: maKhoa || null,
                             maNganh: maNganh || null,
                             maChuyenNganh: maChuyenNganh || null,
                             maNienKhoa: maNienKhoa || null
                         },
                         total: {
-                            nganh: resultData.length,
+                            khoa: resultData.length,
                             chuongTrinh: curricula.length
                         }
                     }
@@ -198,6 +230,7 @@ class ChuongTrinhDaoTaoModel {
                     data: [],
                     meta: {
                         filter: {
+                            maKhoa: maKhoa || null,
                             maNganh: maNganh || null,
                             maChuyenNganh: maChuyenNganh || null,
                             maNienKhoa: maNienKhoa || null

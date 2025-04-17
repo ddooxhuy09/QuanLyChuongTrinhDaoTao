@@ -54,6 +54,28 @@ class ChuyenNganhModel {
             };
         }
     }
+
+    // Lấy danh sách chuyên ngành theo ngành
+    async layDanhSachChuyenNganhTheoNganh(maNganh) {
+        try {
+            const pool = await poolPromise;
+            const result = await pool.request()
+                .input('MaNganh', sql.NVarChar(10), maNganh)
+                .execute('SP_DocDanhSachChuyenNganh_TheoNganh');
+                
+            return {
+                success: true,
+                message: 'Lấy danh sách chuyên ngành theo ngành thành công',
+                data: result.recordset
+            };
+        } catch (error) {
+            console.error('Model - Error layDanhSachChuyenNganhTheoNganh:', error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
 }
 
 module.exports = ChuyenNganhModel;

@@ -52,6 +52,36 @@ class ChuyenNganhController {
             });
         }
     }
+
+    // Phương thức lấy danh sách chuyên ngành theo mã ngành
+    async layDanhSachChuyenNganhTheoNganh(req, res) {
+        try {
+            // Lấy mã ngành từ query parameter
+            const maNganh = req.query.nganh;
+            
+            // Kiểm tra mã ngành
+            if (!maNganh) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Mã ngành không được để trống'
+                });
+            }
+            
+            // Gọi phương thức từ model
+            const result = await this.chuyenNganhModel.layDanhSachChuyenNganhTheoNganh(maNganh);
+            
+            if (result.success) {
+                return res.status(200).json(result);
+            } else {
+                return res.status(400).json(result);
+            }
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi server: ' + error.message
+            });
+        }
+    }
 }
 
 module.exports = ChuyenNganhController;

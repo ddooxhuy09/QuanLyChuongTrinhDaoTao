@@ -51,6 +51,28 @@ class NganhModel {
             };
         }
     }
+
+    // Lấy danh sách ngành theo khoa
+    async layDanhSachNganhTheoKhoa(maKhoa) {
+        try {
+            const pool = await poolPromise;
+            const result = await pool.request()
+                .input('MaKhoa', sql.NVarChar(10), maKhoa)
+                .execute('SP_DocDanhSachNganh_TheoKhoa');
+                
+            return {
+                success: true,
+                message: 'Lấy danh sách ngành theo khoa thành công',
+                data: result.recordset
+            };
+        } catch (error) {
+            console.error('Model - Error layDanhSachNganhTheoKhoa:', error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
 }
 
 module.exports = NganhModel;
