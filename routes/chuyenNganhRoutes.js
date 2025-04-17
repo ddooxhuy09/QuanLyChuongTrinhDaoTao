@@ -8,9 +8,6 @@ const chuyenNganhController = new ChuyenNganhController();
 // Route thêm chuyên ngành mới
 router.post('/', (req, res) => chuyenNganhController.themChuyenNganh(req, res));
 
-// Route lấy danh sách tất cả chuyên ngành
-router.get('/', (req, res) => chuyenNganhController.layDanhSachChuyenNganh(req, res));
-
 router.get('/', (req, res) => {
     const { nganh } = req.query;
     if (nganh) {
