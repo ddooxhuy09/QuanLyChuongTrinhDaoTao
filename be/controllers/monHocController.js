@@ -1,4 +1,4 @@
-const MonHocModel = require('../models/monHocModel');
+const MonHocModel = require("../models/monHocModel");
 
 class MonHocController {
   constructor() {
@@ -8,6 +8,7 @@ class MonHocController {
   async themMonHoc(req, res) {
     try {
       const {
+        maMonHoc,
         tenMonHoc,
         soTinChi,
         soTietLiThuyet,
@@ -15,26 +16,29 @@ class MonHocController {
         soTietThucHanh,
         soTietTuHoc,
         ngonNguDay,
-        laMonTuChon
+        laMonTuChon,
+        maKhoiKienThuc,
       } = req.body;
 
       // Kiểm tra dữ liệu đầu vào
-      if (!tenMonHoc || !soTinChi) {
+      if (!maMonHoc || !tenMonHoc || !soTinChi || !maKhoiKienThuc) {
         return res.status(400).json({
           success: false,
-          message: 'Tên môn học và số tín chỉ không được để trống'
+          message:
+            "Mã môn học, tên môn học, số tín chỉ và mã khối kiến thức không được để trống",
         });
       }
 
       if (soTinChi <= 0) {
         return res.status(400).json({
           success: false,
-          message: 'Số tín chỉ phải lớn hơn 0'
+          message: "Số tín chỉ phải lớn hơn 0",
         });
       }
 
       // Tạo đối tượng monHocData để truyền vào model
       const monHocData = {
+        maMonHoc,
         tenMonHoc,
         soTinChi,
         soTietLiThuyet,
@@ -42,7 +46,8 @@ class MonHocController {
         soTietThucHanh,
         soTietTuHoc,
         ngonNguDay,
-        laMonTuChon
+        laMonTuChon,
+        maKhoiKienThuc,
       };
 
       // Gọi phương thức từ model
@@ -56,56 +61,58 @@ class MonHocController {
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: 'Lỗi server: ' + error.message
+        message: "Lỗi server: " + error.message,
       });
     }
   }
 
   async layDanhSachMonHoc(req, res) {
     try {
-        // Gọi phương thức từ model
-        const result = await this.monHocModel.layDanhSachMonHoc();
+      // Gọi phương thức từ model
+      const result = await this.monHocModel.layDanhSachMonHoc();
 
-        if (result.success) {
-            return res.status(200).json(result);
-        } else {
-            return res.status(400).json(result);
-        }
+      if (result.success) {
+        return res.status(200).json(result);
+      } else {
+        return res.status(400).json(result);
+      }
     } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: 'Lỗi server: ' + error.message
-        });
-    }
-}
-
-async layDanhSachMonHocTheoKhoiKienThuc(req, res) {
-  try {
-    const { maKhoiKienThuc } = req.params;
-    
-    // Validate input
-    if (!maKhoiKienThuc) {
-      return res.status(400).json({
+      return res.status(500).json({
         success: false,
-        message: 'Mã khối kiến thức không được để trống'
+        message: "Lỗi server: " + error.message,
       });
     }
-    
-    // Call model method
-    const result = await this.monHocModel.layDanhSachMonHocTheoKhoiKienThuc(maKhoiKienThuc);
-    
-    if (result.success) {
-      return res.status(200).json(result);
-    } else {
-      return res.status(400).json(result);
-    }
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Lỗi server: ' + error.message
-    });
   }
-}
+
+  async layDanhSachMonHocTheoKhoiKienThuc(req, res) {
+    try {
+      const { maKhoiKienThuc } = req.params;
+
+      // Validate input
+      if (!maKhoiKienThuc) {
+        return res.status(400).json({
+          success: false,
+          message: "Mã khối kiến thức không được để trống",
+        });
+      }
+
+      // Call model method
+      const result = await this.monHocModel.layDanhSachMonHocTheoKhoiKienThuc(
+        maKhoiKienThuc
+      );
+
+      if (result.success) {
+        return res.status(200).json(result);
+      } else {
+        return res.status(400).json(result);
+      }
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi server: " + error.message,
+      });
+    }
+  }
 }
 
 module.exports = MonHocController;

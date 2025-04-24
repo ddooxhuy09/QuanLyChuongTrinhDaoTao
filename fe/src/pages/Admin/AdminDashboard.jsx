@@ -4,11 +4,11 @@ const AdminDashboard = () => {
   const user = JSON.parse(localStorage.getItem("user"));
 
   return (
-    <div>
+    <div className="p-6">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-primary mb-2">
-          🎉 Chào mừng, {user?.name}!
+          🛠️ Chào mừng, {user?.name}!
         </h1>
         <p className="text-lg text-base-content">
           Đây là giao diện Dashboard dành cho phòng đào tạo
@@ -27,7 +27,7 @@ const AdminDashboard = () => {
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body">
             <h2 className="card-title text-primary">Active Courses</h2>
-            <p className="text-3xl font-bold">56</p>
+            <p className="text-3xl font-bold">20</p>
           </div>
         </div>
 

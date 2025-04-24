@@ -55,7 +55,9 @@ const ChitietCtdt = () => {
     if (!chiTiet || !Array.isArray(chiTiet)) return {};
     const grouped = {};
     chiTiet.forEach((mon) => {
-      const kyHoc = mon.MaKyHoc ? `${mon.TenKyHoc} (${mon.MaKyHoc})` : "Chung";
+      const kyHoc = mon.MaKyHoc
+        ? `${mon.TenKyHoc} (${mon.MaKyHoc})`
+        : "Môn tự chọn";
       if (!grouped[kyHoc]) grouped[kyHoc] = [];
       grouped[kyHoc].push(mon);
     });

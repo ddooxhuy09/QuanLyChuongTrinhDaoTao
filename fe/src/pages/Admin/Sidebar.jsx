@@ -1,6 +1,16 @@
 // src/components/Sidebar.jsx
 import React, { useState } from "react";
-import { Menu, X, Home, Users, Settings, LogOut } from "lucide-react";
+import {
+  Menu,
+  X,
+  Home,
+  Users,
+  Settings,
+  LogOut,
+  BookOpen,
+  BookOpenText,
+  SquareChartGantt,
+} from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const Sidebar = () => {
@@ -9,18 +19,18 @@ const Sidebar = () => {
 
   const menuItems = [
     { icon: Home, label: "Dashboard", path: "/admin" },
-    { icon: Users, label: "Users", path: "/admin/users" },
-    { icon: Users, label: "Môn Học", path: "/admin/monhoc" },
+    { icon: BookOpen, label: "Môn Học", path: "/admin/monhoc" },
     {
-      icon: Users,
-      label: "Khối Kiến Thức - Môn học",
+      icon: BookOpenText,
+      label: "Khối Kiến Thức",
       path: "/admin/khoikienthuc-monhoc",
     },
     {
-      icon: Settings,
+      icon: SquareChartGantt,
       label: "Chương trình đào tạo",
       path: "/admin/chuongtrinhdaotao",
     },
+    { icon: Users, label: "Người dùng", path: "/admin/users" },
     { icon: Settings, label: "Settings", path: "/admin/settings" },
   ];
 
@@ -51,7 +61,7 @@ const Sidebar = () => {
           {/* Logo */}
           <div className="p-6 border-b border-base-300">
             <h2 className="mt-10 lg:mt-0 text-3xl font-bold text-primary tracking-wide">
-              Admin Panel
+              Admin
             </h2>
           </div>
 

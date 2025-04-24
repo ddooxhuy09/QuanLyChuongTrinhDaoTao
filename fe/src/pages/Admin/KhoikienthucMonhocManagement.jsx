@@ -145,7 +145,7 @@ const KhoikienthucMonhocManagement = () => {
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold text-primary mb-6">
-        🧩 Khối Kiến Thức & Môn Học
+        Khối Kiến Thức & Môn Học
       </h1>
       {loading ? (
         <div className="text-lg">Đang tải khối kiến thức...</div>

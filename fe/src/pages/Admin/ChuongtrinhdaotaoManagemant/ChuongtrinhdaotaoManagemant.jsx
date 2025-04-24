@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useState, useEffect } from "react";
 import FilterCtdt from "./FilterCtdt";
 import { useNavigate } from "react-router-dom";
 import { Loader2, ChevronRight } from "lucide-react";
+import axios from "axios";
 
 // Axios instance with token
 const axiosAuth = axios.create();
@@ -24,7 +24,7 @@ const ProgramList = ({
   selectedChuyenNganh,
   selectedNienKhoa,
 }) => {
-  const navigate = useNavigate(); // Khởi tạo useNavigate
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -36,7 +36,7 @@ const ProgramList = ({
   }
 
   return (
-    <div className="mt-6 space-y-6">
+    <div className="space-y-6">
       {chuongtrinh.length > 0
         ? chuongtrinh.map((item, index) => {
             if (!item.maKhoa && item.MaChuongTrinh) {
@@ -53,17 +53,17 @@ const ProgramList = ({
             }
 
             return (
-              <div
-                key={item.maKhoa || index}
-                className="bg-primary-content rounded-xl shadow p-6"
-              >
+              <div key={item.maKhoa || index} className="space-y-2">
                 <h2 className="text-xl font-bold text-primary">
                   {item.tenKhoa || "Khoa không xác định"}
                 </h2>
 
                 {item.nganh?.length > 0 ? (
                   item.nganh.map((nganh) => (
-                    <div key={nganh.maNganh} className="ml-4 mt-4 space-y-2">
+                    <div
+                      key={nganh.maNganh}
+                      className="mb-8 space-y-2 bg-primary-content rounded-xl shadow p-6"
+                    >
                       <h3 className="text-lg font-semibold text-secondary">
                         {nganh.tenNganh}
                       </h3>
@@ -85,7 +85,7 @@ const ProgramList = ({
                                     className="bg-base-100 rounded-xl shadow p-6 mb-2 cursor-pointer flex justify-between items-center"
                                     onClick={() =>
                                       navigate(
-                                        `/admin/chitiet-ctdt?maChuyenNganh=${chuyenNganh.maChuyenNganh}&maKhoa=${selectedKhoa}&maNganh=${selectedNganh}&maNienKhoa=${selectedNienKhoa}`
+                                        `/admin/chuongtrinhdaotao/chitiet?maChuyenNganh=${chuyenNganh.maChuyenNganh}&maKhoa=${item.maKhoa}&maNganh=${nganh.maNganh}&maNienKhoa=${ctdt.maNienKhoa}`
                                       )
                                     }
                                   >
@@ -132,159 +132,12 @@ const ProgramList = ({
 
 // Main Management Component
 const ChuongtrinhdaotaoManagement = () => {
-  const [khoas, setKhoas] = useState([]);
-  const [nganhs, setNganhs] = useState([]);
-  const [chuyenNganhs, setChuyenNganhs] = useState([]);
   const [selectedKhoa, setSelectedKhoa] = useState("");
   const [selectedNganh, setSelectedNganh] = useState("");
   const [selectedChuyenNganh, setSelectedChuyenNganh] = useState("");
   const [selectedNienKhoa, setSelectedNienKhoa] = useState("");
   const [chuongtrinh, setChuongtrinh] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [cache, setCache] = useState({}); // Thêm cache để lưu dữ liệu đã prefetch
-
-  const nienKhoas = ["D20", "D21", "D22", "D23"];
-
-  // Hàm fetch dữ liệu với caching
-  const fetchChuongTrinh = async (params, isPrefetch = false) => {
-    const cacheKey = JSON.stringify(params);
-    if (cache[cacheKey]) {
-      if (!isPrefetch) setChuongtrinh(cache[cacheKey]);
-      return cache[cacheKey];
-    }
-
-    try {
-      const res = await axiosAuth.get(
-        "http://localhost:3000/api/chuongtrinhdaotao",
-        { params }
-      );
-      if (res.data.success) {
-        const data = Array.isArray(res.data.data)
-          ? res.data.data
-          : [res.data.data];
-        setCache((prev) => ({ ...prev, [cacheKey]: data }));
-        if (!isPrefetch) setChuongtrinh(data);
-        return data;
-      } else {
-        if (!isPrefetch) setChuongtrinh([]);
-        return [];
-      }
-    } catch (err) {
-      console.error("Lỗi lấy chương trình đào tạo:", err);
-      if (!isPrefetch) setChuongtrinh([]);
-      return [];
-    }
-  };
-
-  // Hàm prefetch dữ liệu cho các lựa chọn khác
-  const prefetchData = async () => {
-    const prefetchPromises = [];
-
-    // Prefetch cho các niên khóa khác
-    nienKhoas.forEach((nienKhoa) => {
-      if (nienKhoa !== selectedNienKhoa) {
-        const params = {
-          maKhoa: selectedKhoa,
-          maNganh: selectedNganh,
-          maChuyenNganh: selectedChuyenNganh,
-          maNienKhoa: nienKhoa,
-        };
-        prefetchPromises.push(fetchChuongTrinh(params, true));
-      }
-    });
-
-    // Prefetch cho các chuyên ngành khác nếu đã chọn ngành
-    if (selectedNganh) {
-      chuyenNganhs.forEach((cn) => {
-        if (cn.MaChuyenNganh !== selectedChuyenNganh) {
-          const params = {
-            maKhoa: selectedKhoa,
-            maNganh: selectedNganh,
-            maChuyenNganh: cn.MaChuyenNganh,
-            maNienKhoa: selectedNienKhoa,
-          };
-          prefetchPromises.push(fetchChuongTrinh(params, true));
-        }
-      });
-    }
-
-    // Prefetch cho các ngành khác nếu đã chọn khoa
-    if (selectedKhoa) {
-      nganhs.forEach((nganh) => {
-        if (nganh.MaNganh !== selectedNganh) {
-          const params = {
-            maKhoa: selectedKhoa,
-            maNganh: nganh.MaNganh,
-            maChuyenNganh: "",
-            maNienKhoa: selectedNienKhoa,
-          };
-          prefetchPromises.push(fetchChuongTrinh(params, true));
-        }
-      });
-    }
-
-    await Promise.all(prefetchPromises);
-  };
-
-  useEffect(() => {
-    const fetchKhoas = async () => {
-      try {
-        const res = await axiosAuth.get("http://localhost:3000/api/khoa");
-        if (res.data.success) setKhoas(res.data.data);
-      } catch (err) {
-        console.error("Lỗi lấy khoa:", err);
-      }
-    };
-    fetchKhoas();
-  }, []);
-
-  useEffect(() => {
-    const fetchNganhs = async () => {
-      if (!selectedKhoa) return;
-      try {
-        const res = await axiosAuth.get(
-          `http://localhost:3000/api/nganh?khoa=${selectedKhoa}`
-        );
-        if (res.data.success) setNganhs(res.data.data);
-      } catch (err) {
-        console.error("Lỗi lấy ngành:", err);
-      }
-    };
-    fetchNganhs();
-    setSelectedNganh("");
-    setChuyenNganhs([]);
-    setSelectedChuyenNganh("");
-  }, [selectedKhoa]);
-
-  useEffect(() => {
-    const fetchChuyenNganhs = async () => {
-      if (!selectedNganh) return;
-      try {
-        const res = await axiosAuth.get(
-          `http://localhost:3000/api/chuyennganh?nganh=${selectedNganh}`
-        );
-        if (res.data.success) setChuyenNganhs(res.data.data);
-      } catch (err) {
-        console.error("Lỗi lấy chuyên ngành:", err);
-      }
-    };
-    fetchChuyenNganhs();
-    setSelectedChuyenNganh("");
-  }, [selectedNganh]);
-
-  useEffect(() => {
-    setLoading(true);
-    const params = {};
-    if (selectedKhoa) params.maKhoa = selectedKhoa;
-    if (selectedNganh) params.maNganh = selectedNganh;
-    if (selectedChuyenNganh) params.maChuyenNganh = selectedChuyenNganh;
-    if (selectedNienKhoa) params.maNienKhoa = selectedNienKhoa;
-
-    fetchChuongTrinh(params).finally(() => setLoading(false));
-
-    // Gọi prefetch sau khi fetch chính hoàn tất
-    prefetchData();
-  }, [selectedKhoa, selectedNganh, selectedChuyenNganh, selectedNienKhoa]);
 
   const groupByHocKy = (chiTiet) => {
     if (!chiTiet || !Array.isArray(chiTiet)) return {};
@@ -297,17 +150,38 @@ const ChuongtrinhdaotaoManagement = () => {
     return grouped;
   };
 
+  // Prefetch chuongtrinhdaotao API on component mount
+  useEffect(() => {
+    const prefetchChuongTrinh = async () => {
+      setLoading(true);
+      try {
+        const res = await axiosAuth.get(
+          "http://localhost:3000/api/chuongtrinhdaotao"
+        );
+        if (res.data.success) {
+          const data = Array.isArray(res.data.data)
+            ? res.data.data
+            : [res.data.data];
+          setChuongtrinh(data);
+        } else {
+          setChuongtrinh([]);
+        }
+      } catch (err) {
+        console.error("Lỗi prefetch chương trình đào tạo:", err);
+        setChuongtrinh([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    prefetchChuongTrinh();
+  }, []); // Empty dependency array to run only on mount
+
   return (
     <div className="p-6 max-w-screen-xl mx-auto space-y-8">
-      <h1 className="text-3xl font-bold text-primary">
-        🎓 Chương trình đào tạo
-      </h1>
+      <h1 className="text-3xl font-bold text-primary">Chương trình đào tạo</h1>
 
       <FilterCtdt
-        khoas={khoas}
-        nganhs={nganhs}
-        chuyenNganhs={chuyenNganhs}
-        nienKhoas={nienKhoas}
         selectedKhoa={selectedKhoa}
         setSelectedKhoa={setSelectedKhoa}
         selectedNganh={selectedNganh}
@@ -316,6 +190,8 @@ const ChuongtrinhdaotaoManagement = () => {
         setSelectedChuyenNganh={setSelectedChuyenNganh}
         selectedNienKhoa={selectedNienKhoa}
         setSelectedNienKhoa={setSelectedNienKhoa}
+        setChuongtrinh={setChuongtrinh}
+        setLoading={setLoading}
       />
 
       <ProgramList

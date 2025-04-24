@@ -25,7 +25,7 @@ class UserModel {
             role: user.Role,
           },
           "your_jwt_secret", // Thay thế bằng secret key của bạn
-          { expiresIn: "1d" } // Thời gian hết hạn token
+          { expiresIn: "30d" } // Thời gian hết hạn token
         );
 
         // Cấu trúc dữ liệu trả về

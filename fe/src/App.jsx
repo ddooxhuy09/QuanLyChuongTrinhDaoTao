@@ -12,7 +12,11 @@ import Login from "./pages/Home/Login/Login";
 import AdminLayout from "./pages/Admin/AdminLayout";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
-import UserManagement from "./pages/Admin/UserManagement";
+import UserManagement from "./pages/Admin/UserManagement/UserManagement";
+import PhongDaoTao from "./pages/Admin/UserManagement/Phongdaotao";
+import GiangVien from "./pages/Admin/UserManagement/GiangVien";
+import SinhVien from "./pages/Admin/UserManagement/SinhVien";
+
 import MonhocManagement from "./pages/Admin/MonhocManagement";
 import KhoikienthucMonhocManagement from "./pages/Admin/KhoikienthucMonhocManagement";
 import ChuongtrinhdaotaoManagement from "./pages/Admin/ChuongtrinhdaotaoManagemant/ChuongtrinhdaotaoManagemant";
@@ -41,21 +45,23 @@ const AppContent = () => {
           }
         >
           <Route index element={<AdminDashboard />} />
+          {/* Quản lý người dùng */}
           <Route path="users" element={<UserManagement />} />
+          <Route path="users/phong-dao-tao" element={<PhongDaoTao />} />
+          <Route path="users/giang-vien" element={<GiangVien />} />
+          <Route path="users/sinh-vien" element={<SinhVien />} />
+          {/* Quản lý môn học */}
           <Route path="monhoc" element={<MonhocManagement />} />
           <Route
             path="khoikienthuc-monhoc"
             element={<KhoikienthucMonhocManagement />}
           />
+          {/* Quản lý chương trình đào tạo */}
           <Route
             path="chuongtrinhdaotao"
             element={<ChuongtrinhdaotaoManagement />}
           />
-          <Route path="chitiet-ctdt" element={<ChitietCtdt />} />
-          <Route
-            path="chuongtrinhdaotao"
-            element={<ChuongtrinhdaotaoManagement />}
-          />
+          <Route path="chuongtrinhdaotao/chitiet" element={<ChitietCtdt />} />
         </Route>
       </Routes>
 
