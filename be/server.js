@@ -1,69 +1,21 @@
 const express = require('express');
-const app = express();
-const bodyParser = require('body-parser');
-const cors = require('cors'); // Để hỗ trợ CORS nếu cần
-
-// Import các routes
-const khoaRoutes = require('./routes/khoaRoutes');
-const monHocRoutes = require('./routes/monHocRoutes');
-const nganhRoutes = require('./routes/nganhRoutes');
-const bangCapRoutes = require('./routes/bangCapRoutes');
-const chuyenNganhRoutes = require('./routes/chuyenNganhRoutes');
-const khoiKienThucRoutes = require('./routes/khoiKienThucRoutes');
-const khoiKienThucChuyenNganhRoutes = require('./routes/khoiKienThucChuyenNganhRoutes');
-const khoiKienThucKhoaRoutes = require('./routes/khoiKienThucKhoaRoutes');
-const khoiKienThucNganhRoutes = require('./routes/khoiKienThucNganhRoutes');
-const khoiKienThucMonHocRoutes = require('./routes/khoiKienThucMonHocRoutes');
-const nienKhoaRoutes = require('./routes/nienKhoaRoutes');
-const chuongTrinhDaoTaoRoutes = require('./routes/chuongTrinhDaoTaoRoutes');
+const userRoutes = require('./routes/userRoutes');
 const sinhVienRoutes = require('./routes/sinhVienRoutes');
-const giangVienRoutes = require('./routes/giangVienRoutes');
-const phongDaoTaoRoutes = require('./routes/phongDaoTaoRoutes');
-const userRoutes = require('./routes/userRoutes'); // Import routes xác thực
-const verifyToken = require('./middleware/auth'); // Import middleware xác thực
+const khoiKienThucRoutes = require('./routes/khoiKienThucRoutes');
+const nganhRoutes = require('./routes/nganhRoutes');
+const chuongTrinhDaoTaoRoutes = require('./routes/chuongTrinhDaoTaoRoutes');
+const monHocRoutes = require('./routes/monHocRoutes'); // Thêm route mới
 
-// Middleware
-app.use(cors()); // Thêm CORS nếu cần
+const app = express();
+
 app.use(express.json());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 
-// Routes không cần xác thực
-app.use('/api/user', userRoutes); // Đường dẫn đăng nhập
-
-// Routes cần xác thực
-app.use('/api/khoa', verifyToken, khoaRoutes);
-app.use('/api/monhoc', verifyToken, monHocRoutes);
-app.use('/api/nganh', verifyToken, nganhRoutes);
-app.use('/api/bangcap', verifyToken, bangCapRoutes);
-app.use('/api/chuyennganh', verifyToken, chuyenNganhRoutes);
-app.use('/api/khoikienthuc', verifyToken, khoiKienThucRoutes);
-app.use('/api/khoikienthuc-chuyennganh', verifyToken, khoiKienThucChuyenNganhRoutes);
-app.use('/api/khoikienthuc-khoa', verifyToken, khoiKienThucKhoaRoutes);
-app.use('/api/khoikienthuc-nganh', verifyToken, khoiKienThucNganhRoutes);
-app.use('/api/khoikienthuc-monhoc', verifyToken, khoiKienThucMonHocRoutes);
-app.use('/api/nienkhoa', verifyToken, nienKhoaRoutes);
-app.use('/api/chuongtrinhdaotao', verifyToken, chuongTrinhDaoTaoRoutes);
-app.use('/api/sinhvien', verifyToken, sinhVienRoutes);
-app.use('/api/giangvien', verifyToken, giangVienRoutes);
-app.use('/api/phongdaotao', verifyToken, phongDaoTaoRoutes);
-
-// Xử lý lỗi 404
-app.use((req, res) => {
-    res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy đường dẫn yêu cầu'
-    });
-});
-
-// Xử lý lỗi 500
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({
-        success: false,
-        message: 'Lỗi server: ' + err.message
-    });
-});
+app.use('/api', userRoutes);
+app.use('/api', sinhVienRoutes);
+app.use('/api', khoiKienThucRoutes);
+app.use('/api', nganhRoutes);
+app.use('/api', chuongTrinhDaoTaoRoutes);
+app.use('/api', monHocRoutes); // Sử dụng route mới
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

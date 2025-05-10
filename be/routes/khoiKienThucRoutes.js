@@ -1,22 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const KhoiKienThucController = require('../controllers/khoiKienThucController');
+const { verifyToken } = require('../middleware/auth');
 
-// Khởi tạo controller trước khi sử dụng
 const khoiKienThucController = new KhoiKienThucController();
 
-// Route thêm khối kiến thức mới
-router.post('/', (req, res) => khoiKienThucController.themKhoiKienThuc(req, res));
+// API lấy danh sách khối kiến thức theo cấu trúc phân cấp
+router.get('/khoikienthuc', verifyToken, (req, res) => khoiKienThucController.getDanhSachKhoiKienThuc(req, res));
 
-// Route lấy danh sách khối kiến thức
-router.get('/', (req, res) => khoiKienThucController.layDanhSachKhoiKienThuc(req, res));
-
-// Route lấy chi tiết khối kiến thức và danh sách môn học theo id
-router.get('/:id', (req, res) => khoiKienThucController.layChiTietKhoiKienThucVaMonHoc(req, res));
-
-router.put('/:id', (req, res) => khoiKienThucController.suaKhoiKienThuc(req, res));
-
-// Route xóa khối kiến thức
-router.delete('/:id', (req, res) => khoiKienThucController.xoaKhoiKienThuc(req, res));
+// API lấy danh sách môn học theo khối kiến thức
+router.get('/khoikienthuc/:makhoikienthuc', verifyToken, (req, res) => khoiKienThucController.getDanhSachMonHocByKhoiKienThuc(req, res));
 
 module.exports = router;

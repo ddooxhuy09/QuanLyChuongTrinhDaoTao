@@ -1,37 +1,39 @@
 const express = require('express');
 const router = express.Router();
 const ChuongTrinhDaoTaoController = require('../controllers/chuongTrinhDaoTaoController');
+const { verifyToken, restrictTo } = require('../middleware/auth');
 
-// Khởi tạo controller trước khi sử dụng
 const chuongTrinhDaoTaoController = new ChuongTrinhDaoTaoController();
 
-// Route thêm chương trình đào tạo mới
-router.post('/', (req, res) => chuongTrinhDaoTaoController.themChuongTrinhDaoTao(req, res));
+// API lấy danh sách chương trình đào tạo
+router.get('/chuongtrinhdaotao', verifyToken, (req, res) => chuongTrinhDaoTaoController.getDanhSachChuongTrinhDaoTao(req, res));
 
-// Consolidated route for getting list with or without filters
-router.get('/', (req, res) => {
-    // Lấy cả tham số cũ và mới
-    const maKhoa = req.query.maKhoa || req.query.khoa;
-    const maNganh = req.query.maNganh || req.query.nganh;
-    const maChuyenNganh = req.query.maChuyenNganh || req.query.chuyennganh;
-    const maNienKhoa = req.query.maNienKhoa || req.query.nienkhoa;
-    
-    // Gán lại vào req.query để controller có thể sử dụng
-    req.query.maKhoa = maKhoa;
-    req.query.maNganh = maNganh;
-    req.query.maChuyenNganh = maChuyenNganh;
-    req.query.maNienKhoa = maNienKhoa;
-    
-    // Check if any filter parameters are provided
-    if (maKhoa || maNganh || maChuyenNganh || maNienKhoa) {
-        return chuongTrinhDaoTaoController.layDanhSachChuongTrinhDaoTaoTheoFilter(req, res);
-    } else {
-        // If no filters, use the original method
-        return chuongTrinhDaoTaoController.layDanhSachChuongTrinhDaoTao(req, res);
-    }
-});
+// API GET chung cho cả xem toàn bộ CTĐT và xem học kỳ cụ thể
+router.get('/chuongtrinhdaotao/:machuongtrinh', 
+    verifyToken, 
+    (req, res) => chuongTrinhDaoTaoController.xemChiTietChuongTrinh(req, res));
 
-// Route để lấy chi tiết theo ID chuyên ngành
-router.get('/:id', (req, res) => chuongTrinhDaoTaoController.layChiTietChuongTrinhDaoTaoTheoChuyenNganh(req, res));
+// API thêm môn học vào CTĐT
+router.post('/chuongtrinhdaotao/:machuongtrinh', 
+    verifyToken, 
+    restrictTo('Phòng đào tạo'), 
+    (req, res) => chuongTrinhDaoTaoController.themMonHocVaoCTDT(req, res));
+
+// API xóa môn học khỏi CTĐT
+router.delete('/chuongtrinhdaotao/:machuongtrinh/monhoc/:mamonhoc', 
+    verifyToken, 
+    restrictTo('Phòng đào tạo'), 
+    (req, res) => chuongTrinhDaoTaoController.xoaMonHocKhoiCTDT(req, res));
+
+// API cập nhật học kỳ cho môn học trong CTĐT
+router.patch('/chuongtrinhdaotao/:machuongtrinh/monhoc/:mamonhoc', 
+    verifyToken, 
+    restrictTo('Phòng đào tạo'), 
+    (req, res) => chuongTrinhDaoTaoController.capNhatHocKyMonHoc(req, res));
+
+// API lấy danh sách môn tự chọn
+router.get('/chuongtrinhdaotao/:machuongtrinh/mamontuchon/:mamonhoctuchon', 
+    verifyToken, 
+    (req, res) => chuongTrinhDaoTaoController.layDanhSachMonTuChon(req, res));
 
 module.exports = router;

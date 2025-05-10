@@ -1,144 +1,98 @@
-const { sql, poolPromise } = require('../config/database');
+const { sql, poolPromise } = require("../config/database");
 
 class KhoiKienThucModel {
-    // Thêm khối kiến thức mới
-    async themKhoiKienThuc(tenKhoiKienThuc, parentID) {
+    async getDanhSachKhoiKienThuc() {
         try {
             const pool = await poolPromise;
-            const result = await pool.request()
-                .input('TenKhoiKienThuc', sql.NVarChar(100), tenKhoiKienThuc)
-                .input('ParentID', sql.NVarChar(10), parentID)
-                .execute('SP_ThemKhoiKienThuc');
-
-            if (result.recordset && result.recordset.length > 0) {
-                return {
-                    success: true,
-                    message: 'Thêm khối kiến thức thành công',
-                    data: result.recordset[0]
-                };
-            } else {
-                return {
-                    success: false,
-                    message: 'Thêm khối kiến thức thất bại'
-                };
-            }
-        } catch (error) {
-            console.error('Model - Error themKhoiKienThuc:', error);
-            return {
-                success: false,
-                message: error.message
-            };
-        }
-    }
-
-    // Lấy danh sách khối kiến thức
-    async layDanhSachKhoiKienThuc() {
-        try {
-            const pool = await poolPromise;
-            const result = await pool.request()
-                .execute('SP_DocDanhSachKhoiKienThuc');
-
-            return {
-                success: true,
-                message: 'Lấy danh sách khối kiến thức thành công',
-                data: result.recordset
-            };
-        } catch (error) {
-            console.error('Model - Error layDanhSachKhoiKienThuc:', error);
-            return {
-                success: false,
-                message: error.message
-            };
-        }
-    }
-
-    async suaKhoiKienThuc(maKhoiKienThuc, tenKhoiKienThuc, parentID) {
-        try {
-            const pool = await poolPromise;
-            const result = await pool.request()
-                .input('MaKhoiKienThuc', sql.NVarChar(10), maKhoiKienThuc)
-                .input('TenKhoiKienThuc', sql.NVarChar(100), tenKhoiKienThuc)
-                .input('ParentID', sql.NVarChar(10), parentID || null)
-                .execute('SP_SuaKhoiKienThuc');
-    
-            if (result.recordset && result.recordset.length > 0) {
-                return {
-                    success: true,
-                    message: 'Cập nhật khối kiến thức thành công',
-                    data: result.recordset[0]
-                };
-            } else {
-                return {
-                    success: false,
-                    message: 'Cập nhật khối kiến thức thất bại'
-                };
-            }
-        } catch (error) {
-            console.error('Model - Error suaKhoiKienThuc:', error);
-            return {
-                success: false,
-                message: error.message
-            };
-        }
-    }
-    
-    // Xóa khối kiến thức
-    async xoaKhoiKienThuc(maKhoiKienThuc) {
-        try {
-            const pool = await poolPromise;
-            const result = await pool.request()
-                .input('MaKhoiKienThuc', sql.NVarChar(10), maKhoiKienThuc)
-                .execute('SP_XoaKhoiKienThuc');
-    
-            if (result.recordset && result.recordset.length > 0) {
-                return {
-                    success: true,
-                    message: 'Xóa khối kiến thức thành công',
-                    data: result.recordset[0]
-                };
-            } else {
-                return {
-                    success: false,
-                    message: 'Xóa khối kiến thức thất bại hoặc khối kiến thức không tồn tại'
-                };
-            }
-        } catch (error) {
-            console.error('Model - Error xoaKhoiKienThuc:', error);
-            return {
-                success: false,
-                message: error.message
-            };
-        }
-    }
-    async layChiTietKhoiKienThucVaMonHoc(maKhoiKienThuc) {
-        try {
-            const pool = await poolPromise;
-            const result = await pool.request()
-                .input('MaKhoiKienThuc', sql.NVarChar(10), maKhoiKienThuc)
-                .execute('SP_DocChiTietKhoiKienThucVaMonHoc');
+            const result = await pool.request().execute("SP_GetKhoiKienThucHierarchy");
             
-            if (result.recordsets && result.recordsets.length >= 2) {
-                const khoiKienThuc = result.recordsets[0][0] || null;
-                const monHocList = result.recordsets[1] || [];
+            if (result.recordset && result.recordset.length > 0) {
+                // Tổ chức kết quả thành cấu trúc cây
+                const khoiKienThucMap = {};
+                const rootKhoiKienThuc = [];
                 
-                if (khoiKienThuc) {
-                    return {
-                        success: true,
-                        message: 'Lấy thông tin khối kiến thức và môn học thành công',
-                        data: {
-                            khoiKienThuc: khoiKienThuc,
-                            danhSachMonHoc: monHocList
-                        }
+                // Đầu tiên tạo map các khối kiến thức
+                result.recordset.forEach(item => {
+                    khoiKienThucMap[item.MaKhoiKienThuc] = {
+                        maKhoiKienThuc: item.MaKhoiKienThuc,
+                        tenKhoiKienThuc: item.TenKhoiKienThuc,
+                        parentId: item.ParentID,
+                        level: item.Level,
+                        tongSoTinChi: item.TongSoTinChi,
+                        khoiKienThucCon: []
                     };
-                }
+                });
+                
+                // Sau đó tổ chức thành cấu trúc cây
+                result.recordset.forEach(item => {
+                    if (item.ParentID) {
+                        // Nếu có parent, thêm vào danh sách con của parent đó
+                        khoiKienThucMap[item.ParentID].khoiKienThucCon.push(khoiKienThucMap[item.MaKhoiKienThuc]);
+                    } else {
+                        // Nếu không có parent, đây là khối kiến thức gốc
+                        rootKhoiKienThuc.push(khoiKienThucMap[item.MaKhoiKienThuc]);
+                    }
+                });
+                
+                // Tính lại tổng số tín chỉ theo cấu trúc phân cấp
+                this.tinhTongSoTinChi(rootKhoiKienThuc);
+                
+                return {
+                    success: true,
+                    data: rootKhoiKienThuc
+                };
             }
             
             return {
                 success: false,
-                message: 'Không tìm thấy khối kiến thức'
+                message: "Không tìm thấy dữ liệu khối kiến thức"
             };
         } catch (error) {
-            console.error('Model - Error layChiTietKhoiKienThucVaMonHoc:', error);
+            console.error("Model - Error getDanhSachKhoiKienThuc:", error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
+    
+    // Phương thức đệ quy tính tổng tín chỉ
+    tinhTongSoTinChi(khoiKienThucList) {
+        for (const kkt of khoiKienThucList) {
+            if (kkt.khoiKienThucCon && kkt.khoiKienThucCon.length > 0) {
+                // Đệ quy tính tổng tín chỉ cho các khối con
+                this.tinhTongSoTinChi(kkt.khoiKienThucCon);
+                
+                // Tính lại tổng tín chỉ cho khối hiện tại (là tổng tín chỉ của các khối con)
+                let tongTinChiCon = kkt.khoiKienThucCon.reduce((sum, item) => sum + item.tongSoTinChi, 0);
+                
+                // Tổng tín chỉ khối cha = tổng tín chỉ riêng + tổng tín chỉ từ các khối con
+                kkt.tongSoTinChi = Number((kkt.tongSoTinChi + tongTinChiCon).toFixed(1));
+            }
+        }
+    }
+    
+    async getDanhSachMonHocByKhoiKienThuc(maKhoiKienThuc) {
+        try {
+            const pool = await poolPromise;
+            const result = await pool
+                .request()
+                .input("MaKhoiKienThuc", sql.VarChar(10), maKhoiKienThuc)
+                .execute("SP_GetMonHocByKhoiKienThuc");
+            
+            if (result.recordset && result.recordset.length > 0) {
+                return {
+                    success: true,
+                    data: result.recordset
+                };
+            }
+            
+            return {
+                success: false,
+                message: `Không tìm thấy môn học nào thuộc khối kiến thức ${maKhoiKienThuc}`
+            };
+        } catch (error) {
+            console.error("Model - Error getDanhSachMonHocByKhoiKienThuc:", error);
             return {
                 success: false,
                 message: error.message
