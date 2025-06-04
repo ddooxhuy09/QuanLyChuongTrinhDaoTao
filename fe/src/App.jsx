@@ -18,8 +18,10 @@ import GiangVien from "./pages/Admin/UserManagement/GiangVien";
 import SinhVien from "./pages/Admin/UserManagement/SinhVien";
 
 import MonhocManagement from "./pages/Admin/MonhocManagement";
-import KhoikienthucMonhocManagement from "./pages/Admin/KhoikienthucMonhocManagement";
+import KhoikienthucMonhocManagement from "./pages/Admin/KhoikienthucMonhocManagement/KhoikienthucMonhocManagement";
 import ChuongtrinhdaotaoManagement from "./pages/Admin/ChuongtrinhdaotaoManagemant/ChuongtrinhdaotaoManagemant";
+import NienkhoaKyhocManagement from "./pages/Admin/NienkhoaKyhocManagement";
+import KhoaNganhChuyenNganhManagement from "./pages/Admin/KhoaNganhChuyenNganhManagement";
 import ChitietCtdt from "./pages/Admin/ChuongtrinhdaotaoManagemant/ChitietCtdt";
 
 // 👇 Tạo component wrapper để dùng hook
@@ -62,6 +64,11 @@ const AppContent = () => {
             element={<ChuongtrinhdaotaoManagement />}
           />
           <Route path="chuongtrinhdaotao/chitiet" element={<ChitietCtdt />} />
+          <Route
+            path="khoa-nganh-chuyennganh"
+            element={<KhoaNganhChuyenNganhManagement />}
+          />
+          <Route path="nienkhoa-kyhoc" element={<NienkhoaKyhocManagement />} />
         </Route>
       </Routes>
 

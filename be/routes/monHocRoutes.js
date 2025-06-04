@@ -12,27 +12,27 @@ router.get('/monhoc', verifyToken, (req, res) => monHocController.getDanhSachMon
 router.get('/monhoc/:mamonhoc', verifyToken, (req, res) => monHocController.getMonHocByMa(req, res));
 
 // API thêm môn học mới
-router.post('/monhoc', 
-    verifyToken, 
-    restrictTo('Phòng đào tạo'), 
+router.post('/monhoc',
+    verifyToken,
+    restrictTo('Phòng đào tạo'),
     (req, res) => monHocController.themMonHoc(req, res));
 
 // API cập nhật một phần thông tin môn học
-router.patch('/monhoc/:mamonhoc', 
-    verifyToken, 
-    restrictTo('Phòng đào tạo'), 
+router.patch('/monhoc/:mamonhoc',
+    verifyToken,
+    restrictTo('Phòng đào tạo'),
     (req, res) => monHocController.capNhatMonHoc(req, res));
 
 // API thay thế hoàn toàn thông tin môn học
-router.put('/monhoc/:mamonhoc', 
-    verifyToken, 
-    restrictTo('Phòng đào tạo'), 
+router.put('/monhoc/:mamonhoc',
+    verifyToken,
+    restrictTo('Phòng đào tạo'),
     (req, res) => monHocController.thayTheMonHoc(req, res));
 
 // API xóa môn học
-router.delete('/monhoc/:mamonhoc', 
-    verifyToken, 
-    restrictTo('Phòng đào tạo'), 
+router.delete('/monhoc/:mamonhoc',
+    verifyToken,
+    restrictTo('Phòng đào tạo'),
     (req, res) => monHocController.xoaMonHoc(req, res));
 
 module.exports = router;

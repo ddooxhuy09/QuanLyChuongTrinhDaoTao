@@ -1,4 +1,3 @@
-// src/components/Sidebar.jsx
 import React, { useState } from "react";
 import {
   Menu,
@@ -10,6 +9,7 @@ import {
   BookOpen,
   BookOpenText,
   SquareChartGantt,
+  FolderTree,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -31,6 +31,16 @@ const Sidebar = () => {
       path: "/admin/chuongtrinhdaotao",
     },
     { icon: Users, label: "Người dùng", path: "/admin/users" },
+    {
+      icon: FolderTree,
+      label: "Khoa - Ngành - Chuyên Ngành",
+      path: "/admin/khoa-nganh-chuyennganh",
+    },
+    {
+      icon: FolderTree,
+      label: "Niên khóa - Kỳ học",
+      path: "/admin/nienkhoa-kyhoc",
+    },
     { icon: Settings, label: "Settings", path: "/admin/settings" },
   ];
 
@@ -59,10 +69,12 @@ const Sidebar = () => {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b border-base-300">
-            <h2 className="mt-10 lg:mt-0 text-3xl font-bold text-primary tracking-wide">
-              Admin
-            </h2>
+          <div className="p-6 border-b border-base-300 flex items-center justify-center">
+            <div className="h-12 w-full flex items-center">
+              <h2 className="text-2xl font-bold text-primary tracking-wide truncate">
+                Admin
+              </h2>
+            </div>
           </div>
 
           {/* Menu Items */}
