@@ -6,6 +6,9 @@ const { verifyToken, restrictTo } = require('../middleware/auth');
 const nganhController = new NganhController();
 
 // API lấy danh sách ngành
-router.get('/nganh', verifyToken, (req, res) => nganhController.getDanhSachNganh(req, res));
+router.get('/nganh',
+    verifyToken,
+    restrictTo('Phòng đào tạo', 'Sinh viên', 'Giảng viên'),
+    (req, res) => nganhController.getDanhSachNganh(req, res));
 
 module.exports = router;

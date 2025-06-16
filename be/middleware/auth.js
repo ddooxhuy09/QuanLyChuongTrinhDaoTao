@@ -19,6 +19,11 @@ const verifyToken = (req, res, next) => {
 // Middleware kiểm tra quyền cụ thể
 const restrictTo = (...roles) => {
     return (req, res, next) => {
+        // Cho phép Sinh viên và Giảng viên truy cập các API GET
+        if (req.method === 'GET' && (roles.includes('Sinh viên') || roles.includes('Giảng viên'))) {
+            return next();
+        }
+
         if (!roles.includes(req.user.role)) {
             return res.status(403).json({ success: false, message: 'Không có quyền truy cập' });
         }

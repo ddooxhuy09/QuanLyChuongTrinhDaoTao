@@ -47,21 +47,21 @@ class ChuongTrinhDaoTaoController {
             // Nếu có tham số hocky, gọi API xem chi tiết học kỳ
             if (hocky) {
                 const result = await this.chuongTrinhDaoTaoModel.layThongTinHocKy(
-                    machuongtrinh, 
-                    hocky, 
+                    machuongtrinh,
+                    hocky,
                     chuyennganh
                 );
-                
+
                 if (result.success) {
                     return res.status(200).json(result);
                 } else {
                     return res.status(400).json(result);
                 }
-            } 
+            }
             // Nếu không có tham số hocky, xem toàn bộ chương trình
             else {
                 const result = await this.chuongTrinhDaoTaoModel.getToanBoChuongTrinhDaoTao(machuongtrinh);
-                
+
                 if (result.success) {
                     return res.status(200).json(result);
                 } else {
@@ -79,22 +79,27 @@ class ChuongTrinhDaoTaoController {
     async themMonHocVaoCTDT(req, res) {
         try {
             const { machuongtrinh } = req.params;
-            const { hocky, chuyennganh } = req.query;
-            const { maMonHoc } = req.body;
+            const { maMonHoc, hocky } = req.body;
 
-            if (!machuongtrinh || !hocky || !maMonHoc) {
+            if (!machuongtrinh || !maMonHoc) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Thiếu thông tin bắt buộc (mã chương trình, học kỳ, mã môn học)'
+                    message: 'Thiếu thông tin bắt buộc (mã chương trình, mã môn học)'
                 });
             }
 
-            const result = await this.chuongTrinhDaoTaoModel.themMonHocVaoCTDT(machuongtrinh, hocky, maMonHoc, chuyennganh);
-            
+            const result = await this.chuongTrinhDaoTaoModel.themMonHocVaoCTDT(machuongtrinh, hocky, maMonHoc);
+
             if (result.success) {
-                return res.status(201).json(result);
+                return res.status(201).json({
+                    success: true,
+                    message: result.message || 'Thêm môn học thành công'
+                });
             } else {
-                return res.status(400).json(result);
+                return res.status(400).json({
+                    success: false,
+                    message: result.message || 'Không thể thêm môn học'
+                });
             }
         } catch (error) {
             return res.status(500).json({
@@ -107,7 +112,7 @@ class ChuongTrinhDaoTaoController {
     async xoaMonHocKhoiCTDT(req, res) {
         try {
             const { machuongtrinh, mamonhoc } = req.params;
-            
+
             if (!machuongtrinh || !mamonhoc) {
                 return res.status(400).json({
                     success: false,
@@ -115,8 +120,8 @@ class ChuongTrinhDaoTaoController {
                 });
             }
 
-            const result = await this.chuongTrinhDaoTaoModel.xoaMonHocKhoiCTDT(machuongtrinh, mamonhoc);
-            
+            const result = await this.chuongTrinhDaoTaoModel.xoaMonHocKhoiChuongTrinh(machuongtrinh, mamonhoc);
+
             if (result.success) {
                 return res.status(200).json(result);
             } else {
@@ -157,25 +162,114 @@ class ChuongTrinhDaoTaoController {
         }
     }
 
-    async layDanhSachMonTuChon(req, res) {
+    async getChuyenNganhByMaCT(req, res) {
         try {
-            const { machuongtrinh, mamonhoctuchon } = req.params;
-            const { hocky, chuyennganh } = req.query;
-            
-            if (!machuongtrinh || !hocky || !mamonhoctuchon) {
+            const { machuongtrinh } = req.params;
+
+            if (!machuongtrinh) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Mã chương trình, học kỳ và mã môn tự chọn không được để trống'
+                    message: 'Thiếu mã chương trình đào tạo'
                 });
             }
-            
-            const result = await this.chuongTrinhDaoTaoModel.layDanhSachMonTuChon(
-                machuongtrinh, 
-                hocky, 
-                chuyennganh, 
-                mamonhoctuchon
+
+            const result = await this.chuongTrinhDaoTaoModel.getChuyenNganhByMaCT(machuongtrinh);
+
+            if (result.success) {
+                return res.status(200).json(result);
+            } else {
+                return res.status(400).json(result);
+            }
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi server: ' + error.message
+            });
+        }
+    }
+
+    async themMonTuChonVaoHocKy(req, res) {
+        try {
+            const { machuongtrinh } = req.params;
+            const { maKhoiKienThuc, hocKy } = req.body;
+
+            if (!machuongtrinh || !maKhoiKienThuc || !hocKy) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Thiếu thông tin bắt buộc (mã chương trình, mã khối kiến thức, học kỳ)'
+                });
+            }
+
+            const result = await this.chuongTrinhDaoTaoModel.themMonTuChonVaoHocKy(
+                machuongtrinh,
+                maKhoiKienThuc,
+                hocKy
             );
-            
+
+            if (result.success) {
+                return res.status(201).json(result);
+            } else {
+                return res.status(400).json(result);
+            }
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi server: ' + error.message
+            });
+        }
+    }
+
+    async xoaMonTuChonKhoiHocKy(req, res) {
+        try {
+            const { machuongtrinh, mamonhoc } = req.params;
+            const { hocKy } = req.body;
+
+            if (!machuongtrinh || !mamonhoc || !hocKy) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Thiếu thông tin bắt buộc (mã chương trình, mã môn học, học kỳ)'
+                });
+            }
+
+            const result = await this.chuongTrinhDaoTaoModel.xoaMonTuChonKhoiHocKy(
+                machuongtrinh,
+                mamonhoc,
+                hocKy
+            );
+
+            if (result.success) {
+                return res.status(200).json(result);
+            } else {
+                return res.status(400).json(result);
+            }
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi server: ' + error.message
+            });
+        }
+    }
+
+    async getDanhSachMonTuChon(req, res) {
+        try {
+            const { machuongtrinh } = req.params;
+            // Lấy tham số từ cả query và body
+            const maKhoiKienThuc = req.query.maKhoiKienThuc || req.body.maKhoiKienThuc;
+            const hocKy = req.query.hocKy || req.body.hocKy;
+
+            if (!machuongtrinh || !maKhoiKienThuc || !hocKy) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Thiếu thông tin bắt buộc (mã chương trình, mã khối kiến thức, học kỳ)'
+                });
+            }
+
+            const result = await this.chuongTrinhDaoTaoModel.getDanhSachMonTuChon(
+                machuongtrinh,
+                maKhoiKienThuc,
+                hocKy
+            );
+
             if (result.success) {
                 return res.status(200).json(result);
             } else {
