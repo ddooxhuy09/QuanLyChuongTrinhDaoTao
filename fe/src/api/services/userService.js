@@ -44,3 +44,46 @@ export const logoutUser = () => {
   localStorage.removeItem("access_token");
   localStorage.removeItem("user");
 };
+
+// Lấy thông tin chi tiết user
+export const getUserProfile = async () => {
+  try {
+    const response = await apiClient.get("/user/profile");
+    return response.data;
+  } catch (error) {
+    const message = error.response?.data?.message || "Đã xảy ra lỗi không xác định.";
+    return { success: false, message };
+  }
+};
+
+// Đổi mật khẩu
+export const changePassword = async ({ matKhauCu, matKhauMoi }) => {
+  try {
+    const response = await apiClient.put("/user/password", {
+      matKhauCu,
+      matKhauMoi,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error in changePassword:", error);
+    const message =
+      error.response?.data?.message || "Đã xảy ra lỗi không xác định.";
+    return { success: false, message };
+  }
+};
+
+// Lấy chương trình đào tạo của sinh viên hiện tại
+export const getMyChuongTrinhDaoTaoFromUser = async () => {
+  try {
+    const response = await apiClient.get("/user/my-chuongtrinhdaotao");
+    return response.data;
+  } catch (error) {
+    console.error("Error in getMyChuongTrinhDaoTaoFromUser:", error);
+    const message =
+      error.response?.data?.message || "Đã xảy ra lỗi không xác định.";
+    return { success: false, message };
+  }
+};
+
+

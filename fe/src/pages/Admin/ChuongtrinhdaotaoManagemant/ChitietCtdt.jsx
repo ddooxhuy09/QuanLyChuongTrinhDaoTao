@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import { Loader2, Plus, Edit2, Check, X } from "lucide-react";
 
 // Axios instance with token
 const axiosAuth = axios.create({
-  baseURL: 'http://localhost:3000'
+  baseURL: "http://localhost:3000",
 });
 
 axiosAuth.interceptors.request.use((config) => {
@@ -36,21 +36,156 @@ const ChitietCtdt = () => {
 
   // State mới cho việc chỉnh sửa học kỳ
   const [editingHocKy, setEditingHocKy] = useState(null); // {maMonHoc, hocKyHienTai}
-  const [newHocKy, setNewHocKy] = useState('');
+  const [newHocKy, setNewHocKy] = useState("");
   const [savingHocKy, setSavingHocKy] = useState(false);
   // Thêm state mới cho chế độ hiển thị
-  const [displayMode, setDisplayMode] = useState('khoiKienThuc'); // 'khoiKienThuc' hoặc 'hocKy'
+  const [displayMode, setDisplayMode] = useState("khoiKienThuc"); // 'khoiKienThuc' hoặc 'hocKy'
 
   // Thêm state mới cho danh sách môn tự chọn
   const [danhSachMonTuChon, setDanhSachMonTuChon] = useState([]);
 
+  // Thêm state cho tab hiện tại
+  const [activeTab, setActiveTab] = useState("chuongTrinh"); // 'chuongTrinh' hoặc 'keHoach'
+
+  // Thêm state cho tìm kiếm trong modal
+  const [searchTerm, setSearchTerm] = useState("");
+  // State cho tìm kiếm toàn cục môn học
+  const [globalSearchResults, setGlobalSearchResults] = useState([]);
+  const [isGlobalSearching, setIsGlobalSearching] = useState(false);
+  // State cho modal xác nhận thêm môn học
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [selectedMonHocToAdd, setSelectedMonHocToAdd] = useState(null);
+
   const location = useLocation();
+
+  // Hàm lọc khối kiến thức theo từ khóa tìm kiếm
+  const filterKhoiKienThucBySearch = useCallback((khoiList, searchTerm) => {
+    if (!searchTerm.trim()) return khoiList;
+
+    const searchLower = searchTerm.toLowerCase();
+
+    const filterKhoi = (khoi) => {
+      // Kiểm tra tên khối kiến thức
+      const khoiMatches = khoi.tenKhoiKienThuc.toLowerCase().includes(searchLower);
+
+      // Lọc các khối con
+      const filteredChildren = khoi.khoiKienThucCon
+        ? khoi.khoiKienThucCon.map(filterKhoi).filter(child => child !== null)
+        : [];
+
+      // Nếu khối này khớp hoặc có khối con khớp
+      if (khoiMatches || filteredChildren.length > 0) {
+        return {
+          ...khoi,
+          khoiKienThucCon: filteredChildren
+        };
+      }
+
+      return null;
+    };
+
+    return khoiList.map(filterKhoi).filter(khoi => khoi !== null);
+  }, []);
+
+  // Hàm lọc môn học theo từ khóa tìm kiếm
+  const filterMonHocBySearch = useCallback((monHocList, searchTerm) => {
+    if (!searchTerm.trim()) return monHocList;
+
+    const searchLower = searchTerm.toLowerCase();
+    return monHocList.filter(mon =>
+      mon.tenMonHoc.toLowerCase().includes(searchLower) ||
+      mon.maMonHoc.toLowerCase().includes(searchLower) ||
+      mon.tenMonHocTiengAnh?.toLowerCase().includes(searchLower)
+    );
+  }, []);
+
+  // Hàm tìm kiếm toàn cục môn học
+  const searchGlobalMonHoc = useCallback(async (searchTerm) => {
+    if (!searchTerm.trim()) {
+      setGlobalSearchResults([]);
+      setIsGlobalSearching(false);
+      return;
+    }
+
+    setIsGlobalSearching(true);
+    try {
+      const results = [];
+
+      // Hàm đệ quy để lấy tất cả khối kiến thức (bao gồm khối con)
+      const getAllKhoiKienThuc = (khoiList) => {
+        let allKhoi = [];
+        khoiList.forEach(khoi => {
+          allKhoi.push(khoi);
+          if (khoi.khoiKienThucCon && khoi.khoiKienThucCon.length > 0) {
+            allKhoi = allKhoi.concat(getAllKhoiKienThuc(khoi.khoiKienThucCon));
+          }
+        });
+        return allKhoi;
+      };
+
+      const allKhoiKienThuc = getAllKhoiKienThuc(khoiKienThuc);
+
+      // Tìm kiếm môn học trong tất cả khối kiến thức
+      for (const khoi of allKhoiKienThuc) {
+        try {
+          const res = await axiosAuth.get(`/api/khoikienthuc/${khoi.maKhoiKienThuc}`);
+          if (res.data.success && res.data.data.length > 0) {
+            const monHocList = res.data.data.map((mon) => ({
+              maMonHoc: mon.MaMonHoc,
+              tenMonHoc: mon.TenMonHoc,
+              soTinChi: mon.SoTinChi,
+              soTietLiThuyet: mon.SoTietLiThuyet,
+              soTietBaiTap: mon.SoTietBaiTap,
+              soTietThucHanh: mon.SoTietThucHanh,
+              soTietTuHoc: mon.SoTietTuHoc,
+              ngonNguDay: mon.NgonNguDay,
+              loaiMon: mon.LoaiMon,
+              maKhoiKienThuc: mon.MaKhoiKienThuc,
+              tenKhoiKienThuc: khoi.tenKhoiKienThuc,
+              maMonHocTienQuyet: mon.MaMonHocTienQuyet,
+              tenMonHocTienQuyet: mon.TenMonHocTienQuyet,
+              tenMonHocTiengAnh: mon.TenMonHocTiengAnh,
+            }));
+
+            // Lọc môn học theo từ khóa
+            const filteredMonHoc = filterMonHocBySearch(monHocList, searchTerm);
+            results.push(...filteredMonHoc);
+          }
+        } catch (err) {
+          console.error(`Lỗi lấy môn học cho khối ${khoi.maKhoiKienThuc}:`, err);
+        }
+      }
+
+      // Loại bỏ môn học trùng lặp và môn học đã có trong chương trình
+      const uniqueResults = results.filter((mon, index, self) => {
+        const isUnique = self.findIndex(m => m.maMonHoc === mon.maMonHoc) === index;
+        const notInProgram = !chuongtrinh?.danhSachMonHoc?.some(m => m.maMonHoc === mon.maMonHoc);
+        return isUnique && notInProgram;
+      });
+
+      setGlobalSearchResults(uniqueResults);
+    } catch (err) {
+      console.error("Lỗi tìm kiếm toàn cục:", err);
+      setGlobalSearchResults([]);
+    } finally {
+      setIsGlobalSearching(false);
+    }
+  }, [khoiKienThuc, filterMonHocBySearch, chuongtrinh?.danhSachMonHoc]);
+
+  // Debounce cho tìm kiếm toàn cục
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      searchGlobalMonHoc(searchTerm);
+    }, 500); // Đợi 500ms sau khi người dùng ngừng gõ
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, searchGlobalMonHoc]);
 
   // Hàm tính tổng số tín chỉ của một khối kiến thức
   const tinhTongTinChi = (maKhoiKienThuc, danhSachMonHoc) => {
     if (!danhSachMonHoc) return 0;
     return danhSachMonHoc
-      .filter(mon => mon.maKhoiKienThuc === maKhoiKienThuc)
+      .filter((mon) => mon.maKhoiKienThuc === maKhoiKienThuc)
       .reduce((tong, mon) => tong + (mon.soTinChi || 0), 0);
   };
 
@@ -59,7 +194,9 @@ const ChitietCtdt = () => {
     if (!danhSachMonHoc || !khoiKienThucList) return [];
 
     // Tạo set các mã khối kiến thức có trong danh sách môn học
-    const maKhoiKienThucSet = new Set(danhSachMonHoc.map(mon => mon.maKhoiKienThuc));
+    const maKhoiKienThucSet = new Set(
+      danhSachMonHoc.map((mon) => mon.maKhoiKienThuc)
+    );
 
     // Hàm đệ quy để lọc khối kiến thức
     const filterKhoi = (khoi) => {
@@ -68,9 +205,7 @@ const ChitietCtdt = () => {
 
       // Lọc các khối con
       const filteredChildren = khoi.khoiKienThucCon
-        ? khoi.khoiKienThucCon
-          .map(filterKhoi)
-          .filter(child => child !== null)
+        ? khoi.khoiKienThucCon.map(filterKhoi).filter((child) => child !== null)
         : [];
 
       // Nếu khối này có môn học hoặc có khối con được giữ lại
@@ -78,22 +213,20 @@ const ChitietCtdt = () => {
         return {
           ...khoi,
           khoiKienThucCon: filteredChildren,
-          tongSoTinChi: tinhTongTinChi(khoi.maKhoiKienThuc, danhSachMonHoc)
+          tongSoTinChi: tinhTongTinChi(khoi.maKhoiKienThuc, danhSachMonHoc),
         };
       }
 
       return null;
     };
 
-    return khoiKienThucList
-      .map(filterKhoi)
-      .filter(khoi => khoi !== null);
+    return khoiKienThucList.map(filterKhoi).filter((khoi) => khoi !== null);
   };
 
   useEffect(() => {
     const fetchKhoiKienThuc = async () => {
       try {
-        const res = await axiosAuth.get('/api/khoikienthuc');
+        const res = await axiosAuth.get("/api/khoikienthuc");
         if (res.data.success) {
           setKhoiKienThuc(res.data.data);
         }
@@ -112,7 +245,9 @@ const ChitietCtdt = () => {
     const fetchChuongTrinh = async () => {
       setLoading(true);
       try {
-        const res = await axiosAuth.get(`/api/chuongtrinhdaotao/${maChuongTrinh}`);
+        const res = await axiosAuth.get(
+          `/api/chuongtrinhdaotao/${maChuongTrinh}`
+        );
         if (res.data.success) {
           setChuongtrinh(res.data.data);
         } else {
@@ -129,7 +264,9 @@ const ChitietCtdt = () => {
     const fetchChuyenNganh = async () => {
       setLoadingChuyenNganh(true);
       try {
-        const res = await axiosAuth.get(`/api/chuongtrinhdaotao/${maChuongTrinh}/chuyennganh`);
+        const res = await axiosAuth.get(
+          `/api/chuongtrinhdaotao/${maChuongTrinh}/chuyennganh`
+        );
         if (res.data.success) {
           setChuyenNganh(res.data.data);
         }
@@ -153,7 +290,7 @@ const ChitietCtdt = () => {
       const res = await axiosAuth.get(`/api/khoikienthuc/${maKhoiKienThuc}`);
       if (res.data.success) {
         // Chuyển đổi tên trường từ PascalCase sang camelCase
-        const monHocList = res.data.data.map(mon => ({
+        const monHocList = res.data.data.map((mon) => ({
           maMonHoc: mon.MaMonHoc,
           tenMonHoc: mon.TenMonHoc,
           soTinChi: mon.SoTinChi,
@@ -167,7 +304,7 @@ const ChitietCtdt = () => {
           tenKhoiKienThuc: mon.TenKhoiKienThuc,
           maMonHocTienQuyet: mon.MaMonHocTienQuyet,
           tenMonHocTienQuyet: mon.TenMonHocTienQuyet,
-          tenMonHocTiengAnh: mon.TenMonHocTiengAnh
+          tenMonHocTiengAnh: mon.TenMonHocTiengAnh,
         }));
         setMonHocList(monHocList);
       } else {
@@ -181,27 +318,49 @@ const ChitietCtdt = () => {
     }
   };
 
-  // Hàm thêm môn học vào chương trình
-  const handleThemMonHoc = async (maMonHoc) => {
+
+
+  // Hàm hiển thị modal xác nhận thêm môn học
+  const handleShowConfirmAddMonHoc = (monHoc) => {
+    setSelectedMonHocToAdd(monHoc);
+    setShowConfirmModal(true);
+  };
+
+  // Hàm xác nhận thêm môn học
+  const handleConfirmAddMonHoc = async () => {
+    if (!selectedMonHocToAdd) return;
+
     try {
       const params = new URLSearchParams(location.search);
       const maChuongTrinh = params.get("maChuongTrinh");
 
-      const res = await axiosAuth.post(`/api/chuongtrinhdaotao/${maChuongTrinh}`, {
-        maMonHoc: maMonHoc,
-        hocky: null  // Thêm học kỳ mặc định là null
-      });
+      const res = await axiosAuth.post(
+        `/api/chuongtrinhdaotao/${maChuongTrinh}`,
+        {
+          maMonHoc: selectedMonHocToAdd.maMonHoc,
+          hocky: null, // Thêm học kỳ mặc định là null
+        }
+      );
 
       if (res.data.success) {
         // Refresh lại dữ liệu chương trình
-        const chuongTrinhRes = await axiosAuth.get(`/api/chuongtrinhdaotao/${maChuongTrinh}`);
+        const chuongTrinhRes = await axiosAuth.get(
+          `/api/chuongtrinhdaotao/${maChuongTrinh}`
+        );
         if (chuongTrinhRes.data.success) {
           setChuongtrinh(chuongTrinhRes.data.data);
         }
+
+        // Đóng tất cả modal
         setShowModal(false);
+        setShowConfirmModal(false);
         setSelectedKhoiKienThuc(null);
         setMonHocList([]);
-        alert('Thêm môn học thành công!');
+        setSelectedMonHocToAdd(null);
+        setSearchTerm("");
+        setGlobalSearchResults([]);
+
+        alert("Thêm môn học thành công!");
       }
     } catch (err) {
       console.error("Lỗi thêm môn học:", err);
@@ -216,19 +375,24 @@ const ChitietCtdt = () => {
       const params = new URLSearchParams(location.search);
       const maChuongTrinh = params.get("maChuongTrinh");
 
-      const res = await axiosAuth.patch(`/api/chuongtrinhdaotao/${maChuongTrinh}/monhoc/${maMonHoc}`, {
-        hocky: hocKyMoi
-      });
+      const res = await axiosAuth.patch(
+        `/api/chuongtrinhdaotao/${maChuongTrinh}/monhoc/${maMonHoc}`,
+        {
+          hocky: hocKyMoi,
+        }
+      );
 
       if (res.data.success) {
         // Refresh lại dữ liệu chương trình
-        const chuongTrinhRes = await axiosAuth.get(`/api/chuongtrinhdaotao/${maChuongTrinh}`);
+        const chuongTrinhRes = await axiosAuth.get(
+          `/api/chuongtrinhdaotao/${maChuongTrinh}`
+        );
         if (chuongTrinhRes.data.success) {
           setChuongtrinh(chuongTrinhRes.data.data);
         }
         setEditingHocKy(null);
-        setNewHocKy('');
-        alert('Cập nhật học kỳ thành công!');
+        setNewHocKy("");
+        alert("Cập nhật học kỳ thành công!");
       }
     } catch (err) {
       console.error("Lỗi cập nhật học kỳ:", err);
@@ -240,7 +404,11 @@ const ChitietCtdt = () => {
 
   // Hàm xóa môn học
   const handleXoaMonHoc = async (maMonHoc) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa môn học này khỏi chương trình đào tạo?')) {
+    if (
+      !confirm(
+        "Bạn có chắc chắn muốn xóa môn học này khỏi chương trình đào tạo?"
+      )
+    ) {
       return;
     }
 
@@ -248,15 +416,19 @@ const ChitietCtdt = () => {
       const params = new URLSearchParams(location.search);
       const maChuongTrinh = params.get("maChuongTrinh");
 
-      const res = await axiosAuth.delete(`/api/chuongtrinhdaotao/${maChuongTrinh}/monhoc/${maMonHoc}`);
+      const res = await axiosAuth.delete(
+        `/api/chuongtrinhdaotao/${maChuongTrinh}/monhoc/${maMonHoc}`
+      );
 
       if (res.data.success) {
         // Refresh lại dữ liệu chương trình
-        const chuongTrinhRes = await axiosAuth.get(`/api/chuongtrinhdaotao/${maChuongTrinh}`);
+        const chuongTrinhRes = await axiosAuth.get(
+          `/api/chuongtrinhdaotao/${maChuongTrinh}`
+        );
         if (chuongTrinhRes.data.success) {
           setChuongtrinh(chuongTrinhRes.data.data);
         }
-        alert('Xóa môn học thành công!');
+        alert("Xóa môn học thành công!");
       }
     } catch (err) {
       console.error("Lỗi xóa môn học:", err);
@@ -267,19 +439,27 @@ const ChitietCtdt = () => {
   const MonHocTable = ({ subjects }) => {
     // Sắp xếp môn học theo loại môn
     const sortedSubjects = [...subjects]
-      .filter(mon => !/^[1-9]$/.test(mon.maMonHoc)) // Lọc bỏ môn tự chọn
+      .filter((mon) => !/^[1-9]$/.test(mon.maMonHoc)) // Lọc bỏ môn tự chọn
       .sort((a, b) => {
         const loaiMonOrder = {
-          'Bắt buộc': 1,
-          'Tự chọn': 2,
-          'Thay thế tốt nghiệp': 3
+          "Bắt buộc": 1,
+          "Tự chọn": 2,
+          "Thay thế tốt nghiệp": 3,
         };
         return loaiMonOrder[a.loaiMon] - loaiMonOrder[b.loaiMon];
       });
 
     // Danh sách học kỳ có thể chọn
     const danhSachHocKy = [
-      'HK01', 'HK02', 'HK03', 'HK04', 'HK05', 'HK06', 'HK07', 'HK08', 'HK09'
+      "HK01",
+      "HK02",
+      "HK03",
+      "HK04",
+      "HK05",
+      "HK06",
+      "HK07",
+      "HK08",
+      "HK09",
     ];
 
     // Hàm kiểm tra môn học có thể chuyển sang học kỳ nào
@@ -288,39 +468,51 @@ const ChitietCtdt = () => {
 
       // Kiểm tra môn tiên quyết
       if (mon.maMonHocTienQuyet) {
-        const monTienQuyet = chuongtrinh?.danhSachMonHoc?.find(m => m.maMonHoc === mon.maMonHocTienQuyet);
+        const monTienQuyet = chuongtrinh?.danhSachMonHoc?.find(
+          (m) => m.maMonHoc === mon.maMonHocTienQuyet
+        );
         if (monTienQuyet && monTienQuyet.hocKy) {
-          const hocKyTienQuyet = parseInt(monTienQuyet.hocKy.replace('HK', '').replace(/^0+/, ''));
+          const hocKyTienQuyet = parseInt(
+            monTienQuyet.hocKy.replace("HK", "").replace(/^0+/, "")
+          );
           minHocKy = Math.max(minHocKy, hocKyTienQuyet + 1);
         }
       }
 
       // Kiểm tra môn học trước
       if (mon.maMonHocTruoc) {
-        const monTruoc = chuongtrinh?.danhSachMonHoc?.find(m => m.maMonHoc === mon.maMonHocTruoc);
+        const monTruoc = chuongtrinh?.danhSachMonHoc?.find(
+          (m) => m.maMonHoc === mon.maMonHocTruoc
+        );
         if (monTruoc && monTruoc.hocKy) {
-          const hocKyTruoc = parseInt(monTruoc.hocKy.replace('HK', '').replace(/^0+/, ''));
+          const hocKyTruoc = parseInt(
+            monTruoc.hocKy.replace("HK", "").replace(/^0+/, "")
+          );
           minHocKy = Math.max(minHocKy, hocKyTruoc + 1);
         }
       }
 
       // Kiểm tra các môn phụ thuộc vào môn này
       let maxHocKy = 9;
-      const monPhuThuoc = chuongtrinh?.danhSachMonHoc?.filter(m =>
-        m.maMonHocTienQuyet === mon.maMonHoc || m.maMonHocTruoc === mon.maMonHoc
+      const monPhuThuoc = chuongtrinh?.danhSachMonHoc?.filter(
+        (m) =>
+          m.maMonHocTienQuyet === mon.maMonHoc ||
+          m.maMonHocTruoc === mon.maMonHoc
       );
 
       if (monPhuThuoc?.length > 0) {
         for (const monSau of monPhuThuoc) {
           if (monSau.hocKy) {
-            const hocKyMonSau = parseInt(monSau.hocKy.replace('HK', '').replace(/^0+/, ''));
+            const hocKyMonSau = parseInt(
+              monSau.hocKy.replace("HK", "").replace(/^0+/, "")
+            );
             maxHocKy = Math.min(maxHocKy, hocKyMonSau - 1);
           }
         }
       }
 
-      return danhSachHocKy.filter(hk => {
-        const soHocKy = parseInt(hk.replace('HK', '').replace(/^0+/, ''));
+      return danhSachHocKy.filter((hk) => {
+        const soHocKy = parseInt(hk.replace("HK", "").replace(/^0+/, ""));
         return soHocKy >= minHocKy && soHocKy <= maxHocKy;
       });
     };
@@ -353,8 +545,18 @@ const ChitietCtdt = () => {
               <tr key={mon.maMonHoc} className="text-xs">
                 <td className="p-1">{idx + 1}</td>
                 <td className="p-1">{mon.maMonHoc}</td>
-                <td className="p-1 max-w-[150px] truncate" title={mon.tenMonHoc}>{mon.tenMonHoc}</td>
-                <td className="p-1 max-w-[150px] truncate" title={mon.tenMonHocTiengAnh}>{mon.tenMonHocTiengAnh}</td>
+                <td
+                  className="p-1 max-w-[150px] truncate"
+                  title={mon.tenMonHoc}
+                >
+                  {mon.tenMonHoc}
+                </td>
+                <td
+                  className="p-1 max-w-[150px] truncate"
+                  title={mon.tenMonHocTiengAnh}
+                >
+                  {mon.tenMonHocTiengAnh}
+                </td>
                 <td className="p-1 text-center">{mon.soTinChi}</td>
                 <td className="p-1 text-center">{mon.soTietLiThuyet}</td>
                 <td className="p-1 text-center">{mon.soTietBaiTap}</td>
@@ -364,9 +566,14 @@ const ChitietCtdt = () => {
                 <td className="p-1">{mon.loaiMon}</td>
                 <td className="p-1 max-w-[120px]">
                   {mon.tenMonHocTienQuyet ? (
-                    <div className="truncate" title={`${mon.maMonHocTienQuyet} - ${mon.tenMonHocTienQuyet}`}>
+                    <div
+                      className="truncate"
+                      title={`${mon.maMonHocTienQuyet} - ${mon.tenMonHocTienQuyet}`}
+                    >
                       <div className="font-medium">{mon.maMonHocTienQuyet}</div>
-                      <div className="text-gray-500 truncate">{mon.tenMonHocTienQuyet}</div>
+                      <div className="text-gray-500 truncate">
+                        {mon.tenMonHocTienQuyet}
+                      </div>
                     </div>
                   ) : (
                     <span className="text-gray-400">-</span>
@@ -377,7 +584,9 @@ const ChitietCtdt = () => {
                     <div className="truncate" title={mon.maMonHocTruoc}>
                       <div className="font-medium">{mon.maMonHocTruoc}</div>
                       <div className="text-gray-500 truncate">
-                        {chuongtrinh?.danhSachMonHoc?.find(m => m.maMonHoc === mon.maMonHocTruoc)?.tenMonHoc || '-'}
+                        {chuongtrinh?.danhSachMonHoc?.find(
+                          (m) => m.maMonHoc === mon.maMonHocTruoc
+                        )?.tenMonHoc || "-"}
                       </div>
                     </div>
                   ) : (
@@ -403,22 +612,30 @@ const ChitietCtdt = () => {
                         disabled={savingHocKy}
                       >
                         <option value="">Chọn</option>
-                        {getAvailableHocKy(mon).map(hk => (
-                          <option key={hk} value={hk}>{hk}</option>
+                        {getAvailableHocKy(mon).map((hk) => (
+                          <option key={hk} value={hk}>
+                            {hk}
+                          </option>
                         ))}
                       </select>
                       <button
-                        onClick={() => handleCapNhatHocKy(mon.maMonHoc, newHocKy)}
+                        onClick={() =>
+                          handleCapNhatHocKy(mon.maMonHoc, newHocKy)
+                        }
                         disabled={!newHocKy || savingHocKy}
                         className="btn btn-xs btn-success p-1 min-h-0 h-6"
                         title="Lưu thay đổi"
                       >
-                        {savingHocKy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                        {savingHocKy ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Check className="w-3 h-3" />
+                        )}
                       </button>
                       <button
                         onClick={() => {
                           setEditingHocKy(null);
-                          setNewHocKy('');
+                          setNewHocKy("");
                         }}
                         disabled={savingHocKy}
                         className="btn btn-xs btn-error p-1 min-h-0 h-6"
@@ -433,19 +650,24 @@ const ChitietCtdt = () => {
                       onClick={() => {
                         const availableHocKy = getAvailableHocKy(mon);
                         if (availableHocKy.length === 0) {
-                          alert('Không thể thay đổi học kỳ do ràng buộc môn tiên quyết/môn trước');
+                          alert(
+                            "Không thể thay đổi học kỳ do ràng buộc môn tiên quyết/môn trước"
+                          );
                           return;
                         }
                         setEditingHocKy({
                           maMonHoc: mon.maMonHoc,
-                          hocKyHienTai: mon.hocKy
+                          hocKyHienTai: mon.hocKy,
                         });
-                        setNewHocKy(mon.hocKy || '');
+                        setNewHocKy(mon.hocKy || "");
                       }}
-                      title={`Click để thay đổi học kỳ${mon.tenMonHocTienQuyet ? ` (Sau môn: ${mon.tenMonHocTienQuyet})` : ''}`}
+                      title={`Click để thay đổi học kỳ${mon.tenMonHocTienQuyet
+                        ? ` (Sau môn: ${mon.tenMonHocTienQuyet})`
+                        : ""
+                        }`}
                     >
-                      <span className={mon.hocKy ? '' : 'text-warning'}>
-                        {mon.hocKy || 'Chưa xếp'}
+                      <span className={mon.hocKy ? "" : "text-warning"}>
+                        {mon.hocKy || "Chưa xếp"}
                       </span>
                       <Edit2 className="w-3 h-3 text-primary" />
                     </div>
@@ -475,19 +697,27 @@ const ChitietCtdt = () => {
 
       // Tính tổng tín chỉ của các môn học trực tiếp thuộc khối này
       const tongTinChiTrucTiep = danhSachMonHoc
-        .filter(mon => mon.maKhoiKienThuc === khoi.maKhoiKienThuc && !/^[1-9]$/.test(mon.maMonHoc)) // Lọc bỏ môn tự chọn
+        .filter(
+          (mon) =>
+            mon.maKhoiKienThuc === khoi.maKhoiKienThuc &&
+            !/^[1-9]$/.test(mon.maMonHoc)
+        ) // Lọc bỏ môn tự chọn
         .reduce((tong, mon) => tong + (mon.soTinChi || 0), 0);
 
       // Tính tổng tín chỉ của các khối con
-      const tongTinChiCon = khoi.khoiKienThucCon?.reduce((tong, khoiCon) => {
-        return tong + tinhTongTinChiKhoi(khoiCon, danhSachMonHoc);
-      }, 0) || 0;
+      const tongTinChiCon =
+        khoi.khoiKienThucCon?.reduce((tong, khoiCon) => {
+          return tong + tinhTongTinChiKhoi(khoiCon, danhSachMonHoc);
+        }, 0) || 0;
 
       return tongTinChiTrucTiep + tongTinChiCon;
     };
 
     // Tính tổng tín chỉ cho khối kiến thức hiện tại
-    const tongTinChi = tinhTongTinChiKhoi(khoiKienThuc, chuongtrinh?.danhSachMonHoc);
+    const tongTinChi = tinhTongTinChiKhoi(
+      khoiKienThuc,
+      chuongtrinh?.danhSachMonHoc
+    );
 
     return (
       <div className="space-y-4">
@@ -498,23 +728,31 @@ const ChitietCtdt = () => {
         {/* Hiển thị môn học của khối kiến thức hiện tại */}
         {subjects && subjects.length > 0 && (
           <div className="mb-4">
-            <MonHocTable subjects={subjects.filter(mon => !/^[1-9]$/.test(mon.maMonHoc))} />
+            <MonHocTable
+              subjects={subjects.filter((mon) => !/^[1-9]$/.test(mon.maMonHoc))}
+            />
           </div>
         )}
 
         {/* Hiển thị các khối kiến thức con */}
-        {khoiKienThuc.khoiKienThucCon && khoiKienThuc.khoiKienThucCon.length > 0 && (
-          <div className="pl-6 space-y-6">
-            {khoiKienThuc.khoiKienThucCon.map((khoiCon) => (
-              <div key={khoiCon.maKhoiKienThuc} className="border-l-2 border-primary pl-4">
-                <KhoiKienThucComponent
-                  khoiKienThuc={khoiCon}
-                  subjects={chuongtrinh?.danhSachMonHoc?.filter(mon => mon.maKhoiKienThuc === khoiCon.maKhoiKienThuc)}
-                />
-              </div>
-            ))}
-          </div>
-        )}
+        {khoiKienThuc.khoiKienThucCon &&
+          khoiKienThuc.khoiKienThucCon.length > 0 && (
+            <div className="pl-6 space-y-6">
+              {khoiKienThuc.khoiKienThucCon.map((khoiCon) => (
+                <div
+                  key={khoiCon.maKhoiKienThuc}
+                  className="border-l-2 border-primary pl-4"
+                >
+                  <KhoiKienThucComponent
+                    khoiKienThuc={khoiCon}
+                    subjects={chuongtrinh?.danhSachMonHoc?.filter(
+                      (mon) => mon.maKhoiKienThuc === khoiCon.maKhoiKienThuc
+                    )}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
       </div>
     );
   };
@@ -553,25 +791,92 @@ const ChitietCtdt = () => {
       );
     };
 
+    const filteredKhoiKienThuc = filterKhoiKienThucBySearch(khoiKienThuc, searchTerm);
+    const filteredMonHocList = filterMonHocBySearch(monHocList, searchTerm);
+
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto">
           <h2 className="text-xl font-bold mb-4">Thêm môn học mới</h2>
 
+          {/* Thanh tìm kiếm */}
+          <div className="mb-4">
+            <input
+              key="search-input"
+              type="text"
+              placeholder="Tìm kiếm theo tên khối kiến thức hoặc tên môn học..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input input-bordered w-full"
+              autoFocus
+            />
+          </div>
+
           {!selectedKhoiKienThuc ? (
-            // Hiển thị danh sách khối kiến thức theo cấu trúc phân cấp
-            <div className="space-y-4">
-              {khoiKienThuc.map((khoi) => (
-                <div key={khoi.maKhoiKienThuc}>
-                  {renderKhoiKienThuc(khoi)}
+            <>
+              {/* Hiển thị kết quả tìm kiếm toàn cục môn học khi có từ khóa */}
+              {searchTerm.trim() && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-3 text-primary">
+                    📚 Kết quả tìm kiếm môn học
+                  </h3>
+
+                  {isGlobalSearching ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="animate-spin w-6 h-6" />
+                      <span className="ml-2">Đang tìm kiếm...</span>
+                    </div>
+                  ) : globalSearchResults.length > 0 ? (
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto border rounded-lg p-2">
+                      {globalSearchResults.map((mon) => (
+                        <button
+                          key={`${mon.maMonHoc}-${mon.maKhoiKienThuc}`}
+                          onClick={() => handleShowConfirmAddMonHoc(mon)}
+                          className="w-full text-left p-3 hover:bg-blue-50 rounded-lg border-l-4 border-primary"
+                        >
+                          <div className="font-medium text-primary">{mon.tenMonHoc}</div>
+                          <div className="text-sm text-gray-600">
+                            {mon.maMonHoc} - {mon.soTinChi} tín chỉ
+                          </div>
+                          <div className="text-xs text-blue-600 mt-1">
+                            📁 {mon.tenKhoiKienThuc}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500 border rounded-lg">
+                      Không tìm thấy môn học nào phù hợp
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+              )}
+
+              {/* Hiển thị danh sách khối kiến thức */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-secondary">
+                  📂 Duyệt theo khối kiến thức
+                </h3>
+                <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                  {filteredKhoiKienThuc.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">
+                      Không tìm thấy khối kiến thức nào phù hợp
+                    </div>
+                  ) : (
+                    filteredKhoiKienThuc.map((khoi) => (
+                      <div key={khoi.maKhoiKienThuc}>{renderKhoiKienThuc(khoi)}</div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </>
           ) : (
             // Hiển thị danh sách môn học của khối kiến thức đã chọn
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">{selectedKhoiKienThuc.tenKhoiKienThuc}</h3>
+                <h3 className="font-semibold">
+                  {selectedKhoiKienThuc.tenKhoiKienThuc}
+                </h3>
                 <button
                   onClick={() => setSelectedKhoiKienThuc(null)}
                   className="text-primary hover:underline"
@@ -584,18 +889,23 @@ const ChitietCtdt = () => {
                 <div className="flex justify-center py-4">
                   <Loader2 className="animate-spin w-6 h-6" />
                 </div>
-              ) : monHocList.length === 0 ? (
+              ) : filteredMonHocList.length === 0 ? (
                 <div className="text-center py-4 text-gray-500">
-                  Không có môn học nào trong khối kiến thức này
+                  {searchTerm.trim() ? "Không tìm thấy môn học nào phù hợp" : "Không có môn học nào trong khối kiến thức này"}
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {monHocList
-                    .filter(mon => !chuongtrinh?.danhSachMonHoc?.some(m => m.maMonHoc === mon.maMonHoc))
+                  {filteredMonHocList
+                    .filter(
+                      (mon) =>
+                        !chuongtrinh?.danhSachMonHoc?.some(
+                          (m) => m.maMonHoc === mon.maMonHoc
+                        )
+                    )
                     .map((mon) => (
                       <button
                         key={mon.maMonHoc}
-                        onClick={() => handleThemMonHoc(mon.maMonHoc)}
+                        onClick={() => handleShowConfirmAddMonHoc(mon)}
                         className="w-full text-left p-3 hover:bg-gray-100 rounded-lg"
                       >
                         <div className="font-medium">{mon.tenMonHoc}</div>
@@ -615,6 +925,8 @@ const ChitietCtdt = () => {
                 setShowModal(false);
                 setSelectedKhoiKienThuc(null);
                 setMonHocList([]);
+                setSearchTerm(""); // Reset search term when closing modal
+                setGlobalSearchResults([]); // Reset global search results
               }}
               className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
             >
@@ -632,12 +944,14 @@ const ChitietCtdt = () => {
 
     // Hàm kiểm tra xem học kỳ có môn học thuộc khối kiến thức chuyên ngành không
     const hasChuyenNganhMonHoc = (hocKy) => {
-      return hocKy.monHoc.some(mon => mon.maKhoiKienThuc === chuyenNganh.maKhoiKienThuc);
+      return hocKy.monHoc.some(
+        (mon) => mon.maKhoiKienThuc === chuyenNganh.maKhoiKienThuc
+      );
     };
 
     // Thêm hàm xử lý xóa môn tự chọn
     const handleXoaMonTuChon = async (hocKy) => {
-      if (!confirm('Bạn có chắc chắn muốn xóa môn tự chọn của học kỳ này?')) {
+      if (!confirm("Bạn có chắc chắn muốn xóa môn tự chọn của học kỳ này?")) {
         return;
       }
 
@@ -646,13 +960,14 @@ const ChitietCtdt = () => {
         const maChuongTrinh = params.get("maChuongTrinh");
 
         // Tìm môn tự chọn trong học kỳ
-        const monTuChon = hocKy.monHoc.find(mon =>
-          mon.maKhoiKienThuc === chuyenNganh.maKhoiKienThuc &&
-          /^\d+$/.test(mon.maMonHoc)
+        const monTuChon = hocKy.monHoc.find(
+          (mon) =>
+            mon.maKhoiKienThuc === chuyenNganh.maKhoiKienThuc &&
+            /^\d+$/.test(mon.maMonHoc)
         );
 
         if (!monTuChon) {
-          alert('Không tìm thấy môn tự chọn trong học kỳ này');
+          alert("Không tìm thấy môn tự chọn trong học kỳ này");
           return;
         }
 
@@ -663,17 +978,21 @@ const ChitietCtdt = () => {
 
         if (res.data.success) {
           // Refresh lại dữ liệu chương trình
-          const chuongTrinhRes = await axiosAuth.get(`/api/chuongtrinhdaotao/${maChuongTrinh}`);
+          const chuongTrinhRes = await axiosAuth.get(
+            `/api/chuongtrinhdaotao/${maChuongTrinh}`
+          );
           if (chuongTrinhRes.data.success) {
             setChuongtrinh(chuongTrinhRes.data.data);
           }
-          alert('Xóa môn tự chọn thành công!');
+          alert("Xóa môn tự chọn thành công!");
         } else {
-          alert(res.data.message || 'Không thể xóa môn tự chọn');
+          alert(res.data.message || "Không thể xóa môn tự chọn");
         }
       } catch (err) {
         console.error("Lỗi xóa môn tự chọn:", err);
-        alert(err.response?.data?.message || "Có lỗi xảy ra khi xóa môn tự chọn");
+        alert(
+          err.response?.data?.message || "Có lỗi xảy ra khi xóa môn tự chọn"
+        );
       }
     };
 
@@ -682,24 +1001,31 @@ const ChitietCtdt = () => {
         const params = new URLSearchParams(location.search);
         const maChuongTrinh = params.get("maChuongTrinh");
 
-        const res = await axiosAuth.post(`/api/chuongtrinhdaotao/${maChuongTrinh}/montuchon`, {
-          maKhoiKienThuc: chuyenNganh.maKhoiKienThuc,
-          hocKy: hocKy
-        });
+        const res = await axiosAuth.post(
+          `/api/chuongtrinhdaotao/${maChuongTrinh}/montuchon`,
+          {
+            maKhoiKienThuc: chuyenNganh.maKhoiKienThuc,
+            hocKy: hocKy,
+          }
+        );
 
         if (res.data.success) {
           // Refresh lại dữ liệu chương trình
-          const chuongTrinhRes = await axiosAuth.get(`/api/chuongtrinhdaotao/${maChuongTrinh}`);
+          const chuongTrinhRes = await axiosAuth.get(
+            `/api/chuongtrinhdaotao/${maChuongTrinh}`
+          );
           if (chuongTrinhRes.data.success) {
             setChuongtrinh(chuongTrinhRes.data.data);
           }
-          alert(res.data.message || 'Thêm môn tự chọn thành công!');
+          alert(res.data.message || "Thêm môn tự chọn thành công!");
         } else {
-          alert(res.data.message || 'Không thể thêm môn tự chọn');
+          alert(res.data.message || "Không thể thêm môn tự chọn");
         }
       } catch (err) {
         console.error("Lỗi thêm môn tự chọn:", err);
-        alert(err.response?.data?.message || "Có lỗi xảy ra khi thêm môn tự chọn");
+        alert(
+          err.response?.data?.message || "Có lỗi xảy ra khi thêm môn tự chọn"
+        );
       }
     };
 
@@ -711,13 +1037,13 @@ const ChitietCtdt = () => {
           result.push({
             namHoc: `Năm học thứ ${Math.floor(i / 2) + 1}`,
             hocKy1: keHoachHocTap[i],
-            hocKy2: keHoachHocTap[i + 1]
+            hocKy2: keHoachHocTap[i + 1],
           });
         } else {
           result.push({
             namHoc: `Năm học thứ ${Math.floor(i / 2) + 1}`,
             hocKy1: keHoachHocTap[i],
-            hocKy2: null
+            hocKy2: null,
           });
         }
       }
@@ -754,9 +1080,10 @@ const ChitietCtdt = () => {
                         <Plus className="w-4 h-4" />
                         Thêm môn tự chọn
                       </button>
-                      {namHoc.hocKy1.monHoc.some(mon =>
-                        mon.maKhoiKienThuc === chuyenNganh.maKhoiKienThuc &&
-                        /^\d+$/.test(mon.maMonHoc)
+                      {namHoc.hocKy1.monHoc.some(
+                        (mon) =>
+                          mon.maKhoiKienThuc === chuyenNganh.maKhoiKienThuc &&
+                          /^\d+$/.test(mon.maMonHoc)
                       ) && (
                           <button
                             onClick={() => handleXoaMonTuChon(namHoc.hocKy1)}
@@ -781,14 +1108,16 @@ const ChitietCtdt = () => {
                     </thead>
                     <tbody>
                       {[...namHoc.hocKy1.monHoc]
-                        .filter(mon => mon.loaiMon !== "Tự chọn")
+                        .filter((mon) => mon.loaiMon !== "Tự chọn")
                         .sort((a, b) => b.maMonHoc.localeCompare(a.maMonHoc))
-                        .map((mon, idx) => (
+                        .map((mon, idx) =>
                           mon.maMonHoc.match(/^[1-9]$/) ? (
                             <tr
                               key={mon.maMonHoc}
                               className="cursor-pointer hover:bg-gray-100"
-                              onClick={() => handleShowMonTuChon(mon, namHoc.hocKy1.hocKy)}
+                              onClick={() =>
+                                handleShowMonTuChon(mon, namHoc.hocKy1.hocKy)
+                              }
                             >
                               <td>{idx + 1}</td>
                               <td>{mon.tenMonHoc}</td>
@@ -801,7 +1130,7 @@ const ChitietCtdt = () => {
                               <td>{mon.soTinChi}</td>
                             </tr>
                           )
-                        ))}
+                        )}
                     </tbody>
                   </table>
                 </div>
@@ -817,15 +1146,18 @@ const ChitietCtdt = () => {
                     {hasChuyenNganhMonHoc(namHoc.hocKy2) && (
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleThemMonTuChon(namHoc.hocKy2.hocKy)}
+                          onClick={() =>
+                            handleThemMonTuChon(namHoc.hocKy2.hocKy)
+                          }
                           className="btn btn-primary btn-sm gap-2"
                         >
                           <Plus className="w-4 h-4" />
                           Thêm môn tự chọn
                         </button>
-                        {namHoc.hocKy2.monHoc.some(mon =>
-                          mon.maKhoiKienThuc === chuyenNganh.maKhoiKienThuc &&
-                          /^\d+$/.test(mon.maMonHoc)
+                        {namHoc.hocKy2.monHoc.some(
+                          (mon) =>
+                            mon.maKhoiKienThuc === chuyenNganh.maKhoiKienThuc &&
+                            /^\d+$/.test(mon.maMonHoc)
                         ) && (
                             <button
                               onClick={() => handleXoaMonTuChon(namHoc.hocKy2)}
@@ -850,14 +1182,16 @@ const ChitietCtdt = () => {
                       </thead>
                       <tbody>
                         {[...namHoc.hocKy2.monHoc]
-                          .filter(mon => mon.loaiMon !== "Tự chọn")
+                          .filter((mon) => mon.loaiMon !== "Tự chọn")
                           .sort((a, b) => b.maMonHoc.localeCompare(a.maMonHoc))
-                          .map((mon, idx) => (
+                          .map((mon, idx) =>
                             mon.maMonHoc.match(/^[1-9]$/) ? (
                               <tr
                                 key={mon.maMonHoc}
                                 className="cursor-pointer hover:bg-gray-100"
-                                onClick={() => handleShowMonTuChon(mon, namHoc.hocKy2.hocKy)}
+                                onClick={() =>
+                                  handleShowMonTuChon(mon, namHoc.hocKy2.hocKy)
+                                }
                               >
                                 <td>{idx + 1}</td>
                                 <td>{mon.tenMonHoc}</td>
@@ -870,7 +1204,7 @@ const ChitietCtdt = () => {
                                 <td>{mon.soTinChi}</td>
                               </tr>
                             )
-                          ))}
+                          )}
                       </tbody>
                     </table>
                   </div>
@@ -889,17 +1223,20 @@ const ChitietCtdt = () => {
 
     // Sắp xếp môn học theo học kỳ và lọc bỏ môn có mã từ 1-9
     const sortedSubjects = [...chuongtrinh.danhSachMonHoc]
-      .filter(mon => !/^[1-9]$/.test(mon.maMonHoc)) // Lọc bỏ môn có mã từ 1-9
+      .filter((mon) => !/^[1-9]$/.test(mon.maMonHoc)) // Lọc bỏ môn có mã từ 1-9
       .sort((a, b) => {
         const getHocKyNumber = (hocKy) => {
           if (!hocKy) return 999; // Môn chưa xếp học kỳ sẽ ở cuối
-          return parseInt(hocKy.replace('HK', '').replace(/^0+/, ''));
+          return parseInt(hocKy.replace("HK", "").replace(/^0+/, ""));
         };
         return getHocKyNumber(a.hocKy) - getHocKyNumber(b.hocKy);
       });
 
     // Tạo danh sách học kỳ từ HK01 đến HK09
-    const danhSachHocKy = Array.from({ length: 10 }, (_, i) => `HK${String(i + 1).padStart(2, '0')}`);
+    const danhSachHocKy = Array.from(
+      { length: 10 },
+      (_, i) => `HK${String(i + 1).padStart(2, "0")}`
+    );
 
     // Hàm kiểm tra môn học có thể chuyển sang học kỳ nào
     const getAvailableHocKy = (mon) => {
@@ -907,39 +1244,51 @@ const ChitietCtdt = () => {
 
       // Kiểm tra môn tiên quyết
       if (mon.maMonHocTienQuyet) {
-        const monTienQuyet = chuongtrinh?.danhSachMonHoc?.find(m => m.maMonHoc === mon.maMonHocTienQuyet);
+        const monTienQuyet = chuongtrinh?.danhSachMonHoc?.find(
+          (m) => m.maMonHoc === mon.maMonHocTienQuyet
+        );
         if (monTienQuyet && monTienQuyet.hocKy) {
-          const hocKyTienQuyet = parseInt(monTienQuyet.hocKy.replace('HK', '').replace(/^0+/, ''));
+          const hocKyTienQuyet = parseInt(
+            monTienQuyet.hocKy.replace("HK", "").replace(/^0+/, "")
+          );
           minHocKy = Math.max(minHocKy, hocKyTienQuyet + 1);
         }
       }
 
       // Kiểm tra môn học trước
       if (mon.maMonHocTruoc) {
-        const monTruoc = chuongtrinh?.danhSachMonHoc?.find(m => m.maMonHoc === mon.maMonHocTruoc);
+        const monTruoc = chuongtrinh?.danhSachMonHoc?.find(
+          (m) => m.maMonHoc === mon.maMonHocTruoc
+        );
         if (monTruoc && monTruoc.hocKy) {
-          const hocKyTruoc = parseInt(monTruoc.hocKy.replace('HK', '').replace(/^0+/, ''));
+          const hocKyTruoc = parseInt(
+            monTruoc.hocKy.replace("HK", "").replace(/^0+/, "")
+          );
           minHocKy = Math.max(minHocKy, hocKyTruoc + 1);
         }
       }
 
       // Kiểm tra các môn phụ thuộc vào môn này
       let maxHocKy = 9;
-      const monPhuThuoc = chuongtrinh?.danhSachMonHoc?.filter(m =>
-        m.maMonHocTienQuyet === mon.maMonHoc || m.maMonHocTruoc === mon.maMonHoc
+      const monPhuThuoc = chuongtrinh?.danhSachMonHoc?.filter(
+        (m) =>
+          m.maMonHocTienQuyet === mon.maMonHoc ||
+          m.maMonHocTruoc === mon.maMonHoc
       );
 
       if (monPhuThuoc?.length > 0) {
         for (const monSau of monPhuThuoc) {
           if (monSau.hocKy) {
-            const hocKyMonSau = parseInt(monSau.hocKy.replace('HK', '').replace(/^0+/, ''));
+            const hocKyMonSau = parseInt(
+              monSau.hocKy.replace("HK", "").replace(/^0+/, "")
+            );
             maxHocKy = Math.min(maxHocKy, hocKyMonSau - 1);
           }
         }
       }
 
-      return danhSachHocKy.filter(hk => {
-        const soHocKy = parseInt(hk.replace('HK', '').replace(/^0+/, ''));
+      return danhSachHocKy.filter((hk) => {
+        const soHocKy = parseInt(hk.replace("HK", "").replace(/^0+/, ""));
         return soHocKy >= minHocKy && soHocKy <= maxHocKy;
       });
     };
@@ -949,22 +1298,50 @@ const ChitietCtdt = () => {
         <table className="table table-zebra w-full text-sm">
           <thead>
             <tr className="text-xs">
-              <th className="p-1" rowSpan="2">STT</th>
-              <th className="p-1" rowSpan="2">Mã môn</th>
-              <th className="p-1" rowSpan="2">Tên môn</th>
-              <th className="p-1" rowSpan="2">Tên tiếng Anh</th>
-              <th className="p-1 text-center" colSpan="10">Năm học</th>
-              <th className="p-1" rowSpan="2">Tiên quyết</th>
-              <th className="p-1" rowSpan="2">Trước</th>
-              <th className="p-1" rowSpan="2">Song hành</th>
-              <th className="p-1" rowSpan="2">TT</th>
+              <th className="p-1" rowSpan="2">
+                STT
+              </th>
+              <th className="p-1" rowSpan="2">
+                Mã môn
+              </th>
+              <th className="p-1" rowSpan="2">
+                Tên môn
+              </th>
+              <th className="p-1" rowSpan="2">
+                Tên tiếng Anh
+              </th>
+              <th className="p-1 text-center" colSpan="10">
+                Năm học
+              </th>
+              <th className="p-1" rowSpan="2">
+                Tiên quyết
+              </th>
+              <th className="p-1" rowSpan="2">
+                Trước
+              </th>
+              <th className="p-1" rowSpan="2">
+                Song hành
+              </th>
+              <th className="p-1" rowSpan="2">
+                TT
+              </th>
             </tr>
             <tr className="text-xs">
-              <th className="p-1" colSpan="2">Năm học thứ nhất</th>
-              <th className="p-1" colSpan="2">Năm học thứ hai</th>
-              <th className="p-1" colSpan="2">Năm học thứ ba</th>
-              <th className="p-1" colSpan="2">Năm học thứ tư</th>
-              <th className="p-1" colSpan="2">Năm học thứ năm</th>
+              <th className="p-1" colSpan="2">
+                Năm học thứ nhất
+              </th>
+              <th className="p-1" colSpan="2">
+                Năm học thứ hai
+              </th>
+              <th className="p-1" colSpan="2">
+                Năm học thứ ba
+              </th>
+              <th className="p-1" colSpan="2">
+                Năm học thứ tư
+              </th>
+              <th className="p-1" colSpan="2">
+                Năm học thứ năm
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -972,8 +1349,15 @@ const ChitietCtdt = () => {
               <tr key={mon.maMonHoc} className="text-xs">
                 <td className="p-1 w-[40px]">{idx + 1}</td>
                 <td className="p-1 w-[80px]">{mon.maMonHoc}</td>
-                <td className="p-1 w-[150px] truncate" title={mon.tenMonHoc}>{mon.tenMonHoc}</td>
-                <td className="p-1 w-[150px] truncate" title={mon.tenMonHocTiengAnh}>{mon.tenMonHocTiengAnh}</td>
+                <td className="p-1 w-[150px] truncate" title={mon.tenMonHoc}>
+                  {mon.tenMonHoc}
+                </td>
+                <td
+                  className="p-1 w-[150px] truncate"
+                  title={mon.tenMonHocTiengAnh}
+                >
+                  {mon.tenMonHocTiengAnh}
+                </td>
                 {danhSachHocKy.map((hocKy) => (
                   <td key={hocKy} className="p-1 w-[60px]">
                     {mon.hocKy === hocKy ? (
@@ -986,22 +1370,30 @@ const ChitietCtdt = () => {
                             disabled={savingHocKy}
                           >
                             <option value="">Chọn</option>
-                            {getAvailableHocKy(mon).map(hk => (
-                              <option key={hk} value={hk}>{hk}</option>
+                            {getAvailableHocKy(mon).map((hk) => (
+                              <option key={hk} value={hk}>
+                                {hk}
+                              </option>
                             ))}
                           </select>
                           <button
-                            onClick={() => handleCapNhatHocKy(mon.maMonHoc, newHocKy)}
+                            onClick={() =>
+                              handleCapNhatHocKy(mon.maMonHoc, newHocKy)
+                            }
                             disabled={!newHocKy || savingHocKy}
                             className="btn btn-xs btn-success p-1 min-h-0 h-6"
                             title="Lưu thay đổi"
                           >
-                            {savingHocKy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                            {savingHocKy ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Check className="w-3 h-3" />
+                            )}
                           </button>
                           <button
                             onClick={() => {
                               setEditingHocKy(null);
-                              setNewHocKy('');
+                              setNewHocKy("");
                             }}
                             disabled={savingHocKy}
                             className="btn btn-xs btn-error p-1 min-h-0 h-6"
@@ -1016,31 +1408,41 @@ const ChitietCtdt = () => {
                           onClick={() => {
                             const availableHocKy = getAvailableHocKy(mon);
                             if (availableHocKy.length === 0) {
-                              alert('Không thể thay đổi học kỳ do ràng buộc môn tiên quyết/môn trước');
+                              alert(
+                                "Không thể thay đổi học kỳ do ràng buộc môn tiên quyết/môn trước"
+                              );
                               return;
                             }
                             setEditingHocKy({
                               maMonHoc: mon.maMonHoc,
-                              hocKyHienTai: mon.hocKy
+                              hocKyHienTai: mon.hocKy,
                             });
-                            setNewHocKy(mon.hocKy || '');
+                            setNewHocKy(mon.hocKy || "");
                           }}
-                          title={`Click để thay đổi học kỳ${mon.tenMonHocTienQuyet ? ` (Sau môn: ${mon.tenMonHocTienQuyet})` : ''}`}
+                          title={`Click để thay đổi học kỳ${mon.tenMonHocTienQuyet
+                            ? ` (Sau môn: ${mon.tenMonHocTienQuyet})`
+                            : ""
+                            }`}
                         >
                           <span>{hocKy}</span>
                           <Edit2 className="w-3 h-3 text-primary" />
                         </div>
                       )
                     ) : (
-                      ''
+                      ""
                     )}
                   </td>
                 ))}
                 <td className="p-1 w-[100px]">
                   {mon.tenMonHocTienQuyet ? (
-                    <div className="truncate" title={`${mon.maMonHocTienQuyet} - ${mon.tenMonHocTienQuyet}`}>
+                    <div
+                      className="truncate"
+                      title={`${mon.maMonHocTienQuyet} - ${mon.tenMonHocTienQuyet}`}
+                    >
                       <div className="font-medium">{mon.maMonHocTienQuyet}</div>
-                      <div className="text-gray-500 truncate">{mon.tenMonHocTienQuyet}</div>
+                      <div className="text-gray-500 truncate">
+                        {mon.tenMonHocTienQuyet}
+                      </div>
                     </div>
                   ) : (
                     <span className="text-gray-400">-</span>
@@ -1051,7 +1453,9 @@ const ChitietCtdt = () => {
                     <div className="truncate" title={mon.maMonHocTruoc}>
                       <div className="font-medium">{mon.maMonHocTruoc}</div>
                       <div className="text-gray-500 truncate">
-                        {chuongtrinh?.danhSachMonHoc?.find(m => m.maMonHoc === mon.maMonHocTruoc)?.tenMonHoc || '-'}
+                        {chuongtrinh?.danhSachMonHoc?.find(
+                          (m) => m.maMonHoc === mon.maMonHocTruoc
+                        )?.tenMonHoc || "-"}
                       </div>
                     </div>
                   ) : (
@@ -1094,20 +1498,23 @@ const ChitietCtdt = () => {
         return;
       }
 
-      console.log('Debug - Thông tin môn tự chọn:');
-      console.log('- Mã chương trình:', maChuongTrinh);
-      console.log('- Mã khối kiến thức:', selectedChuyenNganh.maKhoiKienThuc);
-      console.log('- Học kỳ:', hocKy);
-      console.log('- Môn được chọn:', monTuChon);
+      console.log("Debug - Thông tin môn tự chọn:");
+      console.log("- Mã chương trình:", maChuongTrinh);
+      console.log("- Mã khối kiến thức:", selectedChuyenNganh.maKhoiKienThuc);
+      console.log("- Học kỳ:", hocKy);
+      console.log("- Môn được chọn:", monTuChon);
 
-      const res = await axiosAuth.get(`/api/chuongtrinhdaotao/${maChuongTrinh}/montuchon`, {
-        params: {
-          maKhoiKienThuc: selectedChuyenNganh.maKhoiKienThuc,
-          hocKy: hocKy
+      const res = await axiosAuth.get(
+        `/api/chuongtrinhdaotao/${maChuongTrinh}/montuchon`,
+        {
+          params: {
+            maKhoiKienThuc: selectedChuyenNganh.maKhoiKienThuc,
+            hocKy: hocKy,
+          },
         }
-      });
+      );
 
-      console.log('Debug - Response từ API:', res.data);
+      console.log("Debug - Response từ API:", res.data);
 
       if (res.data.success) {
         setSelectedMonTuChon(monTuChon);
@@ -1138,90 +1545,128 @@ const ChitietCtdt = () => {
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto space-y-8">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-primary">
           🎓 Chi tiết chương trình đào tạo
         </h1>
-        <div className="flex items-center gap-4">
-          <div className="join">
+        {activeTab === "chuongTrinh" && (
+          <div className="flex items-center gap-4">
+            <div className="join">
+              <button
+                className={`join-item btn ${displayMode === "khoiKienThuc" ? "btn-primary" : "btn-outline"
+                  }`}
+                onClick={() => setDisplayMode("khoiKienThuc")}
+              >
+                Hiện theo Khối kiến thức
+              </button>
+              <button
+                className={`join-item btn ${displayMode === "hocKy" ? "btn-primary" : "btn-outline"
+                  }`}
+                onClick={() => setDisplayMode("hocKy")}
+              >
+                Hiện theo Học kỳ
+              </button>
+            </div>
             <button
-              className={`join-item btn ${displayMode === 'khoiKienThuc' ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setDisplayMode('khoiKienThuc')}
+              onClick={() => setShowModal(true)}
+              className="btn btn-primary gap-2"
             >
-              Hiện theo Khối kiến thức
-            </button>
-            <button
-              className={`join-item btn ${displayMode === 'hocKy' ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setDisplayMode('hocKy')}
-            >
-              Hiện theo Học kỳ
+              <Plus className="w-5 h-5" />
+              Thêm môn học
             </button>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="btn btn-primary gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Thêm môn học
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-primary-content rounded-xl shadow p-6">
-        <h2 className="text-xl font-bold text-primary mb-4">
-          {chuongtrinh?.thongTinChuongTrinh?.TenChuongTrinh} ({chuongtrinh?.thongTinChuongTrinh?.MaChuongTrinh})
-        </h2>
-        <p className="text-gray-600 mb-6">
-          Trình độ: {chuongtrinh?.thongTinChuongTrinh?.TrinhDoDaoTao} - Hình thức: {chuongtrinh?.thongTinChuongTrinh?.HinhThucDaoTao} - Năm áp dụng: {chuongtrinh?.thongTinChuongTrinh?.NamApDung}
-        </p>
-
-        {displayMode === 'khoiKienThuc' ? (
-          <div className="space-y-8">
-            {filterKhoiKienThuc(khoiKienThuc, chuongtrinh?.danhSachMonHoc).map((khoi) => (
-              <div key={khoi.maKhoiKienThuc} className="bg-base-100 rounded-xl shadow p-4">
-                <KhoiKienThucComponent
-                  khoiKienThuc={khoi}
-                  subjects={chuongtrinh?.danhSachMonHoc?.filter(mon => mon.maKhoiKienThuc === khoi.maKhoiKienThuc)}
-                />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <HocKyTable />
         )}
       </div>
 
-      {/* Kế hoạch học tập */}
+      {/* Thông tin chương trình */}
       <div className="bg-primary-content rounded-xl shadow p-6">
         <h2 className="text-xl font-bold text-primary mb-4">
-          Kế hoạch học tập
+          {chuongtrinh?.thongTinChuongTrinh?.TenChuongTrinh} (
+          {chuongtrinh?.thongTinChuongTrinh?.MaChuongTrinh})
         </h2>
-        {loadingChuyenNganh ? (
-          <div className="flex justify-center items-center py-4 gap-2 text-primary">
-            <Loader2 className="animate-spin w-5 h-5" />
-            Đang tải thông tin chuyên ngành...
-          </div>
-        ) : chuyenNganh.length === 0 ? (
-          <div className="text-center py-4 text-gray-500">
-            Không có thông tin chuyên ngành
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-wrap gap-4">
-              {chuyenNganh.map((nganh) => (
-                <button
-                  key={nganh.maKhoiKienThuc}
-                  className={`btn ${selectedChuyenNganh?.maKhoiKienThuc === nganh.maKhoiKienThuc ? 'btn-primary' : 'btn-outline'}`}
-                  onClick={() => setSelectedChuyenNganh(nganh)}
-                >
-                  {nganh.tenKhoiKienThuc}
-                </button>
-              ))}
-            </div>
+        <p className="text-gray-600 mb-6">
+          Trình độ: {chuongtrinh?.thongTinChuongTrinh?.TrinhDoDaoTao} - Hình
+          thức: {chuongtrinh?.thongTinChuongTrinh?.HinhThucDaoTao} - Năm áp
+          dụng: {chuongtrinh?.thongTinChuongTrinh?.NamApDung}
+        </p>
 
-            {/* Hiển thị kế hoạch học tập của chuyên ngành được chọn */}
-            {selectedChuyenNganh && (
-              <KeHoachHocTapComponent chuyenNganh={selectedChuyenNganh} />
+        {/* Tab Navigation */}
+        <div className="tabs tabs-boxed mb-6">
+          <button
+            className={`tab ${activeTab === "chuongTrinh" ? "tab-active" : ""}`}
+            onClick={() => setActiveTab("chuongTrinh")}
+          >
+            📚 Chương trình đào tạo
+          </button>
+          <button
+            className={`tab ${activeTab === "keHoach" ? "tab-active" : ""}`}
+            onClick={() => setActiveTab("keHoach")}
+          >
+            📅 Kế hoạch học tập
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === "chuongTrinh" && (
+          <>
+            {displayMode === "khoiKienThuc" ? (
+              <div className="space-y-8">
+                {filterKhoiKienThuc(khoiKienThuc, chuongtrinh?.danhSachMonHoc).map(
+                  (khoi) => (
+                    <div
+                      key={khoi.maKhoiKienThuc}
+                      className="bg-base-100 rounded-xl shadow p-4"
+                    >
+                      <KhoiKienThucComponent
+                        khoiKienThuc={khoi}
+                        subjects={chuongtrinh?.danhSachMonHoc?.filter(
+                          (mon) => mon.maKhoiKienThuc === khoi.maKhoiKienThuc
+                        )}
+                      />
+                    </div>
+                  )
+                )}
+              </div>
+            ) : (
+              <HocKyTable />
+            )}
+          </>
+        )}
+
+        {activeTab === "keHoach" && (
+          <>
+            {loadingChuyenNganh ? (
+              <div className="flex justify-center items-center py-4 gap-2 text-primary">
+                <Loader2 className="animate-spin w-5 h-5" />
+                Đang tải thông tin chuyên ngành...
+              </div>
+            ) : chuyenNganh.length === 0 ? (
+              <div className="text-center py-4 text-gray-500">
+                Không có thông tin chuyên ngành
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-4 mb-6">
+                  {chuyenNganh.map((nganh) => (
+                    <button
+                      key={nganh.maKhoiKienThuc}
+                      className={`btn ${selectedChuyenNganh?.maKhoiKienThuc === nganh.maKhoiKienThuc
+                        ? "btn-primary"
+                        : "btn-outline"
+                        }`}
+                      onClick={() => setSelectedChuyenNganh(nganh)}
+                    >
+                      {nganh.tenKhoiKienThuc}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Hiển thị kế hoạch học tập của chuyên ngành được chọn */}
+                {selectedChuyenNganh && (
+                  <KeHoachHocTapComponent chuyenNganh={selectedChuyenNganh} />
+                )}
+              </>
             )}
           </>
         )}
@@ -1231,17 +1676,22 @@ const ChitietCtdt = () => {
 
       {/* Modal hiển thị danh sách môn tự chọn */}
       {showMonTuChonModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-[400px]">
             <h3 className="font-bold text-lg mb-4">Danh sách môn tự chọn</h3>
             {selectedMonTuChon && selectedHocKy && (
               <div className="space-y-4">
                 <div className="overflow-x-auto">
                   <div className="space-y-2">
-                    {danhSachMonTuChon.map(mon => (
-                      <div key={mon.MaMonHoc} className="flex justify-between items-center p-2 hover:bg-gray-100 rounded">
+                    {danhSachMonTuChon.map((mon) => (
+                      <div
+                        key={mon.MaMonHoc}
+                        className="flex justify-between items-center p-2 hover:bg-gray-100 rounded"
+                      >
                         <span>{mon.TenMonHoc}</span>
-                        <span className="text-gray-600">{mon.SoTinChi} tín chỉ</span>
+                        <span className="text-gray-600">
+                          {mon.SoTinChi} tín chỉ
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -1254,6 +1704,73 @@ const ChitietCtdt = () => {
                 onClick={() => setShowMonTuChonModal(false)}
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xác nhận thêm môn học */}
+      {showConfirmModal && selectedMonHocToAdd && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-[500px] max-w-[90vw]">
+            <h3 className="text-xl font-bold text-primary mb-4">
+              🔍 Xác nhận thêm môn học
+            </h3>
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-700">Mã môn học:</span>
+                  <span className="font-semibold text-primary">{selectedMonHocToAdd.maMonHoc}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-700">Tên môn học:</span>
+                  <span className="font-semibold text-right max-w-[300px]">{selectedMonHocToAdd.tenMonHoc}</span>
+                </div>
+                {selectedMonHocToAdd.tenMonHocTiengAnh && (
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-700">Tên tiếng Anh:</span>
+                    <span className="text-right max-w-[300px] text-gray-600">{selectedMonHocToAdd.tenMonHocTiengAnh}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-700">Số tín chỉ:</span>
+                  <span className="font-semibold text-orange-600">{selectedMonHocToAdd.soTinChi}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-700">Khối kiến thức:</span>
+                  <span className="text-right max-w-[300px] text-blue-600">{selectedMonHocToAdd.tenKhoiKienThuc}</span>
+                </div>
+                {selectedMonHocToAdd.loaiMon && (
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-700">Loại môn:</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${selectedMonHocToAdd.loaiMon === 'Bắt buộc' ? 'bg-red-100 text-red-700' :
+                      selectedMonHocToAdd.loaiMon === 'Tự chọn' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                      {selectedMonHocToAdd.loaiMon}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  setSelectedMonHocToAdd(null);
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmAddMonHoc}
+                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-focus transition-colors"
+              >
+                Xác nhận thêm
               </button>
             </div>
           </div>

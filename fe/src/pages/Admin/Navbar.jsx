@@ -10,6 +10,7 @@ import {
   BookOpenText,
   SquareChartGantt,
   FolderTree,
+  Database,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -28,21 +29,20 @@ const Navbar = () => {
     },
     {
       icon: SquareChartGantt,
-      label: "Chương trình đào tạo",
+      label: "Quản lý chương trình đào tạo",
       path: "/admin/chuongtrinhdaotao",
     },
     { icon: Users, label: "Người dùng", path: "/admin/users" },
     {
       icon: FolderTree,
-      label: "Khoa - Ngành - Chuyên Ngành",
+      label: "Khoa - Ngành",
       path: "/admin/khoa-nganh-chuyennganh",
     },
     {
-      icon: FolderTree,
-      label: "Niên khóa - Kỳ học",
-      path: "/admin/nienkhoa-kyhoc",
+      icon: Database,
+      label: "Backup DB",
+      path: "/admin/backup",
     },
-    { icon: Settings, label: "Settings", path: "/admin/settings" },
   ];
 
   const handleLogout = () => {
@@ -76,9 +76,8 @@ const Navbar = () => {
                   <Link
                     to={item.path}
                     onClick={() => setIsOpen(false)}
-                    className={`flex items-center gap-2 ${
-                      isActive ? "bg-primary text-white" : ""
-                    }`}
+                    className={`flex items-center gap-2 ${isActive ? "bg-primary text-white" : ""
+                      }`}
                   >
                     <item.icon size={20} />
                     {item.label}
@@ -111,9 +110,8 @@ const Navbar = () => {
               <li key={index}>
                 <Link
                   to={item.path}
-                  className={`flex items-center gap-2 ${
-                    isActive ? "bg-primary text-white" : ""
-                  }`}
+                  className={`flex items-center gap-2 ${isActive ? "bg-primary text-white" : ""
+                    }`}
                 >
                   <item.icon size={18} />
                   {item.label}
