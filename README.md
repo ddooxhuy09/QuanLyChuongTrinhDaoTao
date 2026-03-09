@@ -109,53 +109,15 @@ Frontend (`fe/`) tổ chức theo module:
 - Microsoft SQL Server
 - Stored Procedures (đăng nhập, CRUD, dashboard, backup/restore, ...)
 
-## Sơ đồ hệ thống (Mermaid)
+## Sơ đồ hệ thống
 
 ### Kiến trúc tổng quan
 
-```mermaid
-flowchart LR
-  U[Nguoi dung<br/>Phong dao tao / Giang vien / Sinh vien]
-  FE[Frontend<br/>React + Vite]
-  API[Backend API<br/>Node.js + Express]
-  AUTH[JWT Auth + Role Middleware]
-  DB[(SQL Server<br/>Stored Procedures)]
-  BKP[Backup / Restore DB]
-
-  U --> FE
-  FE -->|Axios /api| API
-  API --> AUTH
-  AUTH --> API
-  API -->|Execute SP| DB
-  API --> BKP
-  BKP --> DB
-  DB --> API
-  API --> FE
-```
+![Kien truc tong quan](github-assets/kien-truc-tong-quan.png)
 
 ### Luồng đăng nhập và phân quyền
 
-```mermaid
-sequenceDiagram
-  participant User as Nguoi dung
-  participant FE as Frontend
-  participant API as Backend
-  participant DB as SQL Server
-
-  User->>FE: Nhap ten dang nhap, mat khau
-  FE->>API: POST /api/user/dangnhap
-  API->>DB: SP_Login(TenDangNhap, MatKhau)
-  DB-->>API: Thong tin user + role
-  API-->>FE: access_token (JWT) + user profile
-  FE->>FE: Luu localStorage (token, user)
-
-  User->>FE: Truy cap trang bao ve
-  FE->>API: Request kem Authorization: Bearer token
-  API->>API: verifyToken + restrictTo(role)
-  API->>DB: Goi stored procedure nghiep vu
-  DB-->>API: Du lieu
-  API-->>FE: JSON response
-```
+![Flow dang nhap va phan quyen](github-assets/flow.png)
 
 ## 5. Hướng dẫn setup và chạy dự án
 
