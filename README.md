@@ -1,142 +1,135 @@
-# Quản Lý Chương Trình Đào Tạo
+# Curriculum Management System (Hệ thống Quản lý Chương trình Đào tạo)
 
-> Đây là dự án môn học **Thực tập cơ sở - Học kỳ 2 năm 3**.
+[🇻🇳 Tiếng Việt](README.vi.md) | [🇺🇸 English](README.md)
 
-Hệ thống quản lý chương trình đào tạo (CTĐT) cho khoa/trường, hỗ trợ các đối tượng: Phòng Đào tạo, Giảng viên và Sinh viên.
+> This is a project for the course **Basic Internship - Year 3 Semester 2**.
 
-Dự án được xây dựng theo mô hình Fullstack:
+A curriculum management system (CMS) for faculties/universities, supporting: Academic Departments, Lecturers, and Students.
 
-- Frontend: React + Vite
-- Backend: Node.js + Express
-- Database: Microsoft SQL Server (sử dụng Stored Procedure)
+The project is built as a Fullstack application:
 
-## Báo cáo và tài liệu tham khảo
+- **Frontend:** React + Vite
+- **Backend:** Node.js + Express
+- **Database:** Microsoft SQL Server (using Stored Procedures)
 
-- Báo cáo dự án: https://drive.google.com/file/d/1oFmjT4bAaYwDqLGk-fLZmSsz6ONLyEco/view?usp=sharing
-- Slide thuyết trình: https://drive.google.com/file/d/1GfkMBf9k-FEnnSyqTp2cNHxnVoax0AQY/view?usp=sharing
-- Chương trình đào tạo của khoa CNTT được sử dụng làm tài liệu tham khảo và định hướng trong quá trình xây dựng dự án.: https://drive.google.com/file/d/1IKx06HHP7MkWu-2AFf_dZ2p5HW_y4cFw/view?usp=sharing
+## Reports and References
 
-## 1. Giới thiệu đồ án môn học
+- Project Report: [Google Drive Link](https://drive.google.com/file/d/1oFmjT4bAaYwDqLGk-fLZmSsz6ONLyEco/view?usp=sharing)
+- Presentation Slides: [Google Drive Link](https://drive.google.com/file/d/1GfkMBf9k-FEnnSyqTp2cNHxnVoax0AQY/view?usp=sharing)
+- Reference Curriculum (IT Faculty): [Google Drive Link](https://drive.google.com/file/d/1IKx06HHP7MkWu-2AFf_dZ2p5HW_y4cFw/view?usp=sharing)
 
-Dự án mô phỏng bài toán quản lý chương trình đào tạo trong thực tế:
+## 1. Project Introduction
 
-- Quản lý Khoa, Ngành, Khối kiến thức, Môn học.
-- Quản lý Chương trình đào tạo theo năm áp dụng.
-- Gán môn học vào học kỳ trong chương trình đào tạo.
-- Quản lý người dùng và phân quyền theo vai trò.
-- Cung cấp dashboard thống kê cho Phòng Đào tạo.
-- Hỗ trợ backup/restore database từ hệ thống.
+This project simulates a real-world curriculum management problem:
 
-Mục tiêu học thuật:
+- Manage Faculties, Majors, Knowledge Blocks, and Courses.
+- Manage Curriculums based on application year.
+- Assign courses to semesters within a curriculum.
+- User management and role-based access control.
+- Dashboard with statistics for the Academic Department.
+- System-level database backup/restore features.
 
-- Vận dụng kiến trúc API client-server.
-- Làm việc với SQL Server và Stored Procedure.
-- Triển khai xác thực bằng JWT và phân quyền theo role.
-- Tổ chức mã nguồn theo cấu trúc MVC (backend) và service-based API (frontend).
+**Academic Objectives:**
 
-## 2. Chức năng chính theo vai trò
+- Implement an API client-server architecture.
+- Work with SQL Server and Stored Procedures.
+- Deploy JWT authentication and role-based authorization.
+- Organize source code using MVC (backend) and service-based API (frontend).
 
-### Phòng Đào tạo
+## 2. Key Features by Role
 
-- Quản lý tài khoản phòng đào tạo.
-- CRUD Khoa, Ngành, Khối kiến thức, Môn học, Giảng viên, Sinh viên.
-- Quản lý Chương trình đào tạo và chi tiết học kỳ.
-- Xem dashboard tổng hợp thống kê.
-- Thực hiện backup/restore database.
+### Academic Department (Admin)
 
-### Giảng viên
+- Manage admin accounts.
+- CRUD operations for Faculties, Majors, Knowledge Blocks, Courses, Lecturers, and Students.
+- Manage Curriculums and semester details.
+- View statistical dashboards.
+- Perform database backup/restore.
 
-- Đăng nhập hệ thống.
-- Xem thông tin cá nhân.
-- Xem danh sách môn học giảng dạy.
-- Đổi mật khẩu.
+### Lecturers
 
-### Sinh viên
+- System login.
+- View personal profile.
+- View assigned teaching courses.
+- Change password.
 
-- Đăng nhập hệ thống.
-- Xem thông tin cá nhân.
-- Xem CTĐT của bản thân (và các CTĐT cùng nhóm theo năm áp dụng).
-- Xem khối kiến thức, môn học trong chương trình.
-- Đổi mật khẩu.
+### Students
 
-## 3. Kiến trúc và cấu trúc thư mục
+- System login.
+- View personal profile.
+- View personal curriculum (and related curriculums by year).
+- View knowledge blocks and courses within the program.
+- Change password.
+
+## 3. Architecture and Folder Structure
 
 ```text
 QuanLyChuongTrinhDaoTao/
-|- be/        # Backend API (Express + MSSQL)
-|- fe/        # Frontend UI (React + Vite)
-|- db_dump.sql # Script khởi tạo DB + dữ liệu mẫu + stored procedures
-|- github-assets/ # Ảnh demo giao diện cho README/GitHub
+|- be/            # Backend API (Express + MSSQL)
+|- fe/            # Frontend UI (React + Vite)
+|- db_dump.sql    # DB initialization script + sample data + stored procedures
+|- github-assets/ # Demo images for README/GitHub
 ```
 
-Backend (`be/`) được tổ chức theo hướng MVC:
+**Backend (`be/`)** follows the MVC pattern:
 
-- `controllers/`: Xử lý request/response.
-- `models/`: Làm việc với SQL Server.
-- `routes/`: Khai báo endpoint.
-- `middleware/`: JWT auth và phân quyền role.
-- `config/database.js`: Cấu hình kết nối DB.
+- `controllers/`: Handles requests/responses.
+- `models/`: Interacts with SQL Server.
+- `routes/`: Endpoint declarations.
+- `middleware/`: JWT auth and role authorization.
+- `config/database.js`: DB connection configuration.
 
-Frontend (`fe/`) tổ chức theo module:
+**Frontend (`fe/`)** organization:
 
-- `pages/`: Trang Admin/User/Home.
-- `api/services/`: Gọi API theo từng nghiệp vụ.
-- `routes/ProtectedRoute.jsx`: Bảo vệ route theo role.
+- `pages/`: Admin, User, and Home pages.
+- `api/services/`: API calls categorized by business logic.
+- `routes/ProtectedRoute.jsx`: Role-based route protection.
 
-## 4. Công nghệ sử dụng
+## 4. Technologies Used
 
 ### Frontend
 
-- React 19
-- Vite 6
-- React Router
-- Axios
-- Tailwind CSS 4 + DaisyUI
-- Framer Motion
-- Lucide React
+- React 19, Vite 6, React Router
+- Axios, Tailwind CSS 4 + DaisyUI
+- Framer Motion, Lucide React
 
 ### Backend
 
-- Node.js
-- Express 5
-- mssql
-- jsonwebtoken (JWT)
-- dotenv
-- cors
+- Node.js, Express 5
+- `mssql`, `jsonwebtoken` (JWT), `dotenv`, `cors`
 
 ### Database
 
 - Microsoft SQL Server
-- Stored Procedures (đăng nhập, CRUD, dashboard, backup/restore, ...)
+- Stored Procedures (Login, CRUD, Dashboard, Backup/Restore, etc.)
 
-## Sơ đồ hệ thống
+## System Diagrams
 
-### Kiến trúc tổng quan
+### General Architecture
 
-![Kien truc tong quan](github-assets/kien-truc-tong-quan.png)
+![General Architecture](github-assets/kien-truc-tong-quan.png)
 
-### Luồng đăng nhập và phân quyền
+### Login and Authorization Flow
 
-![Flow dang nhap va phan quyen](github-assets/flow.png)
+![Login Flow](github-assets/flow.png)
 
-## 5. Hướng dẫn setup và chạy dự án
+## 5. Setup and Installation
 
-### Yêu cầu môi trường
+### Prerequisites
 
-- Node.js >= 18
-- npm >= 9
+- Node.js >= 18, npm >= 9
 - Microsoft SQL Server
-- SQL Server Management Studio (khuyến nghị)
+- SQL Server Management Studio (Recommended)
 
-### Bước 1: Khởi tạo database
+### Step 1: Initialize Database
 
-1. Mở SQL Server Management Studio.
-2. Tạo database mới tên: `QLChuongTrinhDaoTao` (nếu chưa có).
-3. Chạy toàn bộ file `db_dump.sql` để tạo bảng, dữ liệu mẫu và stored procedure.
+1. Open SQL Server Management Studio.
+2. Create a new database named: `QLChuongTrinhDaoTao`.
+3. Execute the `db_dump.sql` file to create tables, sample data, and stored procedures.
 
-### Bước 2: Cấu hình backend
+### Step 2: Configure Backend
 
-Trong thư mục `be/`, tạo/chỉnh sửa file `.env` theo mẫu:
+In the `be/` directory, create/edit the `.env` file:
 
 ```env
 DB_USER=sa
@@ -147,14 +140,11 @@ DB_PORT=1433
 PORT=3000
 ```
 
-Lưu ý:
+_Note: The JWT secret is currently hard-coded as `ttcs` for demonstration._
 
-- Backend đang sử dụng `encrypt: true` và `trustServerCertificate: true` trong `be/config/database.js`.
-- JWT secret hiện được hard-code trong mã nguồn là `ttcs`.
+### Step 3: Install Dependencies
 
-### Bước 3: Cài dependency
-
-Chạy lần lượt:
+Run the following commands:
 
 ```bash
 cd be
@@ -164,92 +154,63 @@ cd ../fe
 npm install
 ```
 
-### Bước 4: Chạy backend
+### Step 4: Run Backend
 
 ```bash
 cd be
 npm run dev
 ```
 
-Backend mặc định: `http://localhost:3000`
+Default backend: `http://localhost:3000`
 
-### Bước 5: Chạy frontend
+### Step 5: Run Frontend
 
 ```bash
 cd fe
 npm run dev
 ```
 
-Frontend mặc định: `http://localhost:5173`
+Default frontend: `http://localhost:5173` (configured to point to the backend API in `fe/src/api/config/apiClient.js`).
 
-Frontend đang gọi API tới `http://localhost:3000/api` tại file `fe/src/api/config/apiClient.js`.
+## 6. Sample Accounts
 
-## 6. Tài khoản mẫu để test
+Sample data in `db_dump.sql` includes:
 
-Dữ liệu mẫu trong `db_dump.sql` có sẵn 3 tài khoản:
+- **Academic Department (Admin)**
+  - Username: `admin` | Password: `admin`
+- **Lecturer**
+  - Username: `GV001` | Password: `06092025`
+- **Student**
+  - Username: `N001202200` | Password: `123456789`
 
-- Phòng đào tạo
-  - Tên đăng nhập: `admin`
-  - Mật khẩu: `admin`
+## 7. Key APIs
 
-- Giảng viên
-  - Tên đăng nhập: `GV001`
-  - Mật khẩu: `06092025`
-
-- Sinh viên
-  - Tên đăng nhập: `N001202200`
-  - Mật khẩu: `123456789`
-
-## 7. Một số API tiêu biểu
-
-- `POST /api/user/dangnhap`: Đăng nhập, cấp JWT.
-- `GET /api/user/profile`: Lấy thông tin cá nhân.
-- `GET /api/dashboard/*`: Dashboard thống kê (Phòng Đào tạo).
-- `POST /api/backup/device`: Tạo backup device.
+- `POST /api/user/dangnhap`: Login and issue JWT.
+- `GET /api/user/profile`: Fetch personal information.
+- `GET /api/dashboard/*`: Statistical dashboard data.
 - `POST /api/backup/database`: Backup database.
 - `POST /api/backup/database/restore`: Restore database.
-- `GET /api/public/chuongtrinhdaotao`: Lấy danh sách CTĐT công khai.
 
-## 8. Ghi chú phát triển
+## 8. Author and Purpose
 
-- Nên đổi JWT secret sang biến môi trường (`process.env.JWT_SECRET`).
-- Nên hash mật khẩu (bcrypt) thay vì lưu plain text.
-- Nên thêm bộ test API (unit/integration) cho các module quan trọng.
+This project was developed for academic purposes to demonstrate a fullstack curriculum management system with role-based access control and administrative data management.
 
-## 9. Tác giả và mục đích
+## 9. UI Demo
 
-Dự án phục vụ học tập/báo cáo môn học về xây dựng hệ thống quản lý chương trình đào tạo theo hướng fullstack, kết hợp quản lý dữ liệu học vụ và phân quyền người dùng.
+### Public Pages
 
-## 10. Demo giao diện
-
-### Trang public
-
-Trang chủ hệ thống:
-
+Landing Page:
 ![Landing page](github-assets/landing.png)
 
-Chi tiết chương trình đào tạo (public):
+Curriculum Details (Public):
+![Public CTDT](github-assets/chi-tiet-ctdt.png)
 
-![Chi tiet CTDT public](github-assets/chi-tiet-ctdt.png)
+### Admin Panel
 
-### Trang quản trị (Admin)
-
-Danh sách chương trình đào tạo:
-
+Curriculum list & details:
 ![Admin CTDT](github-assets/admin-ctdt.png)
+![Admin CTDT Detail](github-assets/admin-chi-tiet-ctdt.png)
 
-Chi tiết chương trình đào tạo:
-
-![Admin chi tiet CTDT](github-assets/admin-chi-tiet-ctdt.png)
-
-Quản lý kế hoạch học tập:
-
-![Admin ke hoach hoc tap](github-assets/admin-ke-hoach-hoc-tap.png)
-
-Quản lý khối kiến thức:
-
-![Admin khoi kien thuc](github-assets/admin-khoikienthuc.png)
-
-Quản lý môn học:
-
-![Admin mon hoc](github-assets/admin-monhoc.png)
+Management Views:
+![Admin Plan](github-assets/admin-ke-hoach-hoc-tap.png)
+![Admin Course](github-assets/admin-monhoc.png)
